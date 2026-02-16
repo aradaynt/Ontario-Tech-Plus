@@ -91,13 +91,21 @@ class _bookingPageState extends State<bookingpage> {
     instructor: instructor3,
     sessiontype: SessionType.lecture,
   );
+  late Course course4 = Course(
+    name: "Software Quality Assurance",
+    code: "CSCI 3060U",
+    when: [date2],
+    location: "UA 1140",
+    instructor: instructor3,
+    sessiontype: SessionType.lecture,
+  );
   late Student student1 = Student(
     name: "Arad Ayntabli",
     studentid: 100845722,
     program: "Computer Science",
     faculty: "Science",
     year: 4,
-    courses: [course1, course2, course3],
+    courses: [course1, course2, course3, course4],
   );
   late List<Instructor> uniqueProfessors;
   int selectedIndex = -1;
@@ -200,14 +208,15 @@ class _bookingPageState extends State<bookingpage> {
             ),
           ),
           SizedBox(height: 20),
-          for (var i in uniqueProfessors[selectedIndex].officehours)
-            Card(
-              color: colorScheme.primary,
-              child: Padding(
-                padding: EdgeInsetsGeometry.all(18),
-                child: Text(i.toString()),
+          if (selectedIndex != -1)
+            for (var i in uniqueProfessors[selectedIndex].officehours)
+              Card(
+                color: colorScheme.primary,
+                child: Padding(
+                  padding: EdgeInsetsGeometry.all(18),
+                  child: Text(i.toString()),
+                ),
               ),
-            ),
         ],
       ),
     );
