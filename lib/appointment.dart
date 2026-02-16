@@ -230,6 +230,7 @@ class _appointmentbookingPageState extends State<appointmentbookingpage> {
                 } else {
                   selectedIndex = index;
                 }
+                selectedDate = -1;
               });
               print("Selected: ${instructor.name}");
             },
@@ -397,7 +398,7 @@ class _appointmentbookingPageState extends State<appointmentbookingpage> {
                 ),
               ],
             ),
-          SizedBox(height: 20),
+          Spacer(),
           if (selectedDate != -1)
             ElevatedButton(
               onPressed: (() => Navigator.push(
@@ -406,6 +407,7 @@ class _appointmentbookingPageState extends State<appointmentbookingpage> {
               )),
               child: Text("Next"),
             ),
+          SizedBox(height: 60),
         ],
       ),
     );
