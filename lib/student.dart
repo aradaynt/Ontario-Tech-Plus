@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class Student {
   String name = '';
   int studentid = 0;
@@ -5,6 +7,28 @@ class Student {
   String faculty = '';
   int year = 0;
   List<Course> courses = [];
+  Student({
+    required this.name,
+    required this.studentid,
+    required this.program,
+    required this.faculty,
+    required this.year,
+    required List<Course> this.courses,
+  });
+  void addCourse(Course course) {
+    courses.add(course);
+  }
+
+  void removeCourse(Course course) {
+    courses.remove(course);
+  }
+
+  void editCourse(Course course) {
+    int index = courses.indexOf(course);
+    if (index != -1) {
+      courses[index] = course;
+    }
+  }
 }
 
 enum SessionType { lecture, lab, tutorial }
@@ -12,16 +36,40 @@ enum SessionType { lecture, lab, tutorial }
 class Course {
   String name = '';
   String code = '';
-  DateTime? whattime;
-  List<DateTime>? whatdays;
+  List<Dates> when;
   String location = '';
-  Instructor? instructor;
+  Instructor instructor;
   SessionType sessiontype = SessionType.lecture;
+  Course({
+    required this.name,
+    required this.code,
+    required this.when,
+    required this.location,
+    required this.instructor,
+    required this.sessiontype,
+  });
+}
+
+class Dates {
+  String day;
+  TimeOfDay start;
+  TimeOfDay end;
+  Dates(this.day, this.start, this.end);
+  @override
+  String toString() {
+    return '$day: $start - $end\n';
+  }
 }
 
 class Instructor {
   String name = '';
   String email = '';
   String office = '';
-  DateTime? officehours;
+  List<Dates> officehours;
+  Instructor({
+    required this.name,
+    required this.email,
+    required this.office,
+    required this.officehours,
+  });
 }
