@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class Student {
   String name = '';
   int studentid = 0;
@@ -5,7 +7,13 @@ class Student {
   String faculty = '';
   int year = 0;
   List<Course> courses = [];
-  Student(this.name, this.studentid, this.program, this.faculty, this.year);
+  Student({
+    required this.name,
+    required this.studentid,
+    required this.program,
+    required this.faculty,
+    required this.year,
+  });
   void addCourse(Course course) {
     courses.add(course);
   }
@@ -27,26 +35,36 @@ enum SessionType { lecture, lab, tutorial }
 class Course {
   String name = '';
   String code = '';
-  DateTime? whattime;
-  List<DateTime>? whatdays;
+  List<Dates> when;
   String location = '';
   Instructor? instructor;
   SessionType sessiontype = SessionType.lecture;
-  Course(
-    this.name,
-    this.code,
-    this.whattime,
-    this.whatdays,
-    this.location,
+  Course({
+    required this.name,
+    required this.code,
+    required this.when,
+    required this.location,
     this.instructor,
-    this.sessiontype,
-  );
+    required this.sessiontype,
+  });
+}
+
+class Dates {
+  String day;
+  TimeOfDay start;
+  TimeOfDay end;
+  Dates(this.day, this.start, this.end);
 }
 
 class Instructor {
   String name = '';
   String email = '';
   String office = '';
-  DateTime? officehours;
-  Instructor(this.name, this.email, this.office, this.officehours);
+  List<Dates> officehours;
+  Instructor({
+    required this.name,
+    required this.email,
+    required this.office,
+    required this.officehours,
+  });
 }
