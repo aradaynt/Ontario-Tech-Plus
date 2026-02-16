@@ -201,6 +201,7 @@ class _appointmentbookingPageState extends State<appointmentbookingpage> {
   int selectedIndex = -1;
   late List<Instructor> scienceAdvisors = [advisor1, advisor2];
   late List<Instructor> fullList;
+  int selectedDate = -1;
 
   @override
   void initState() {
@@ -224,7 +225,11 @@ class _appointmentbookingPageState extends State<appointmentbookingpage> {
           return GestureDetector(
             onTap: () {
               setState(() {
-                selectedIndex = index;
+                if (isSelected) {
+                  selectedIndex = -1;
+                } else {
+                  selectedIndex = index;
+                }
               });
               print("Selected: ${instructor.name}");
             },
@@ -289,7 +294,7 @@ class _appointmentbookingPageState extends State<appointmentbookingpage> {
     }
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: Text("Booking")),
+      appBar: AppBar(title: Text("Schedule an Appointment")),
       body: Column(
         children: [
           SizedBox(height: 20),
@@ -310,30 +315,97 @@ class _appointmentbookingPageState extends State<appointmentbookingpage> {
           SizedBox(height: 20),
           buildlistview(colorScheme, fullList),
           SizedBox(height: 20),
-          Card(
-            color: colorScheme.primary,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                "Select a Time",
-                style: TextStyle(
-                  color: colorScheme.onPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
           if (selectedIndex != -1)
-            for (var i in fullList[selectedIndex].officehours)
-              Card(
-                color: colorScheme.primary,
-                child: Padding(
-                  padding: EdgeInsetsGeometry.all(18),
-                  child: Text(i.toString()),
+            Column(
+              children: [
+                Card(
+                  color: colorScheme.primary,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      "Select a Time",
+                      style: TextStyle(
+                        color: colorScheme.onPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                ListView.builder(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  itemCount: fullList[selectedIndex].officehours.length,
+                  itemBuilder: (context, index) {
+                    final time = fullList[selectedIndex].officehours[index];
+                    final isSelected = selectedDate == index;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          if (isSelected) {
+                            selectedDate = -1;
+                          } else {
+                            selectedDate = index;
+                          }
+                        });
+                        print("Selected: ${time.toString()}");
+                      },
+                      child: Container(
+                        width: 160,
+                        margin: const EdgeInsets.only(right: 12),
+                        child: Card(
+                          color: isSelected
+                              ? colorScheme.primary
+                              : Colors.white,
+                          elevation: isSelected ? 4 : 1,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: isSelected
+                                  ? colorScheme.primary
+                                  : Colors.transparent,
+                              width: isSelected ? 2 : 1,
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  time.toString(),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? colorScheme.onPrimary
+                                        : Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           SizedBox(height: 20),
+          if (selectedDate != -1)
+            ElevatedButton(
+              onPressed: (() => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => appointmentpage()),
+              )),
+              child: Text("Next"),
+            ),
         ],
       ),
     );

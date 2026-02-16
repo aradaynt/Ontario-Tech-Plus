@@ -57,7 +57,18 @@ class Dates {
   Dates(this.day, this.start, this.end);
   @override
   String toString() {
-    return '$day: $start - $end\n';
+    final startperiod = start.hour >= 12 ? 'PM' : 'AM';
+    final starthour = start.hour == 0
+        ? 12
+        : (start.hour > 12 ? start.hour - 12 : start.hour);
+    final startminute = start.minute.toString().padLeft(2, '0');
+
+    final endperiod = end.hour >= 12 ? 'PM' : 'AM';
+    final endhour = end.hour == 0
+        ? 12
+        : (end.hour > 12 ? end.hour - 12 : end.hour);
+    final endminute = end.minute.toString().padLeft(2, '0');
+    return '$day: \n$starthour:$startminute $startperiod - $endhour:$endminute $endperiod';
   }
 }
 
