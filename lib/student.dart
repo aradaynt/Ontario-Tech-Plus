@@ -13,6 +13,7 @@ class Student {
     required this.program,
     required this.faculty,
     required this.year,
+    required List<Course> this.courses,
   });
   void addCourse(Course course) {
     courses.add(course);
@@ -37,14 +38,14 @@ class Course {
   String code = '';
   List<Dates> when;
   String location = '';
-  Instructor? instructor;
+  Instructor instructor;
   SessionType sessiontype = SessionType.lecture;
   Course({
     required this.name,
     required this.code,
     required this.when,
     required this.location,
-    this.instructor,
+    required this.instructor,
     required this.sessiontype,
   });
 }
@@ -54,6 +55,10 @@ class Dates {
   TimeOfDay start;
   TimeOfDay end;
   Dates(this.day, this.start, this.end);
+  @override
+  String toString() {
+    return '$day: $start - $end\n';
+  }
 }
 
 class Instructor {
