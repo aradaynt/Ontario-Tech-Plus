@@ -604,6 +604,7 @@ class _EmailPageState extends State<EmailPage> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    loadFile();
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(title: Text("Reason for Appointment")),
