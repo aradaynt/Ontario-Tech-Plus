@@ -35,7 +35,7 @@ class MyApp extends StatelessWidget {
           onSurface: Colors.black,
         ),
       ),
-      home: const appointmentpage(),
+      home: const AppointmentPage(),
     );
   }
 }
