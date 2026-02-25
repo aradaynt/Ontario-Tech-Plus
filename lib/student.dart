@@ -73,14 +73,21 @@ class Dates {
 }
 
 class Instructor {
-  String name = '';
-  String email = '';
-  String office = '';
+  final int id;
+  String name;
+  String email;
+  String type;
+  String faculty;
+  String office;
   List<Dates> officehours;
+
   Instructor({
+    required this.id,
     required this.name,
     required this.email,
-    required this.office,
+    required this.type,
+    required this.faculty,
+    this.office = '',
     required this.officehours,
   });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // Added Supabase
 
 import '../student.dart';
 import 'emailPage.dart';
@@ -7,7 +8,8 @@ class SpecificTime extends StatefulWidget {
   final Instructor instructor;
   final Student student;
   final Dates date;
-  final String? weekLabel;
+  final String? weekLabel; // Month, Day, Year. Like America
+
   const SpecificTime({
     super.key,
     required this.instructor,
@@ -15,17 +17,29 @@ class SpecificTime extends StatefulWidget {
     required this.date,
     this.weekLabel,
   });
+
   @override
   State<SpecificTime> createState() => _SpecificTimeState();
 }
 
 class _SpecificTimeState extends State<SpecificTime> {
+  bool _isLoading = true;
   List<Dates> timeslots = [];
-  List<Dates> generateTimeslots() {
-    late int startMinutes =
-        widget.date.start.hour * 60 + widget.date.start.minute;
-    late int endMinutes = widget.date.end.hour * 60 + widget.date.end.minute;
-    late int currentMinutes = startMinutes;
+  int selectedTime = -1;
+  Set<String> bookedStartTimes = {};
+
+  @override
+  void initState() {
+    super.initState();
+    generateTimeslots();
+    _fetchBookedDates();
+  }
+
+  void generateTimeslots() {
+    int startMinutes = widget.date.start.hour * 60 + widget.date.start.minute;
+    int endMinutes = widget.date.end.hour * 60 + widget.date.end.minute;
+    int currentMinutes = startMinutes;
+
     while (currentMinutes + 10 <= endMinutes) {
       int nextMinutes = currentMinutes + 10;
       TimeOfDay slotStart = TimeOfDay(
@@ -38,28 +52,59 @@ class _SpecificTimeState extends State<SpecificTime> {
       );
 
       timeslots.add(Dates(widget.date.day, slotStart, slotEnd));
-
       currentMinutes = nextMinutes;
     }
-    return timeslots;
   }
 
-  int selectedTime = -1;
+  Future<void> _fetchBookedDates() async {
+    if (widget.weekLabel == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
 
-  //TODO Make it so users cant book already booked dates via supabase
-  //TODO Learn how to use Supabase
+    try {
+      final supabase = Supabase.instance.client;
 
-  List<Dates> booked = [];
+      final response = await supabase
+          .from('booked')
+          .select('start')
+          .eq('prof_id', widget.instructor.id)
+          .eq('date', widget.weekLabel as Object);
 
-  @override
-  void initState() {
-    super.initState();
-    generateTimeslots();
+      final Set<String> fetchedBookedTimes = {};
+
+      for (var booking in response) {
+        if (booking['start'] != null) {
+          final startString = booking['start'].toString().substring(0, 5);
+          fetchedBookedTimes.add(startString);
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          bookedStartTimes = fetchedBookedTimes;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Error fetching booked dates: $e");
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: Text("Select a Time Slot")),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text("Select a Time Slot")),
       body: SafeArea(
@@ -67,7 +112,7 @@ class _SpecificTimeState extends State<SpecificTime> {
           children: [
             Expanded(
               child: Padding(
-                padding: EdgeInsetsGeometry.only(top: 8, right: 8),
+                padding: const EdgeInsets.only(top: 8, right: 8),
                 child: Scrollbar(
                   thumbVisibility: true,
                   thickness: 12,
@@ -82,32 +127,40 @@ class _SpecificTimeState extends State<SpecificTime> {
                     itemBuilder: (context, index) {
                       final time = timeslots[index];
                       final isSelected = selectedTime == index;
+
+                      final formattedStart =
+                          '${time.start.hour.toString().padLeft(2, '0')}:${time.start.minute.toString().padLeft(2, '0')}';
+
+                      final isBooked = bookedStartTimes.contains(
+                        formattedStart,
+                      );
+
                       return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            if (!booked.contains(time)) {
-                              if (isSelected) {
-                                selectedTime = -1;
-                              } else {
-                                selectedTime = index;
-                              }
-                            }
-                          });
-                        },
+                        onTap: isBooked
+                            ? null
+                            : () {
+                                setState(() {
+                                  if (isSelected) {
+                                    selectedTime = -1;
+                                  } else {
+                                    selectedTime = index;
+                                  }
+                                });
+                              },
                         child: Container(
                           width: 160,
                           margin: const EdgeInsets.only(right: 12),
                           child: Card(
-                            color: isSelected
-                                ? colorScheme.primary
-                                : booked.contains(time)
-                                ? Colors.grey
-                                : Colors.white,
-                            elevation: isSelected ? 4 : 1,
+                            color: isBooked
+                                ? Colors.grey[300]
+                                : (isSelected
+                                      ? colorScheme.primary
+                                      : Colors.white),
+                            elevation: isBooked ? 0 : (isSelected ? 4 : 1),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                               side: BorderSide(
-                                color: isSelected
+                                color: isSelected && !isBooked
                                     ? colorScheme.primary
                                     : Colors.transparent,
                                 width: isSelected ? 2 : 1,
@@ -119,15 +172,17 @@ class _SpecificTimeState extends State<SpecificTime> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    "${widget.weekLabel!}: $time",
+                                    "${widget.weekLabel ?? ''}: \n$time",
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      color: isSelected
-                                          ? colorScheme.onPrimary
-                                          : Colors.black,
+                                      color: isBooked
+                                          ? Colors.grey[600]
+                                          : (isSelected
+                                                ? colorScheme.onPrimary
+                                                : Colors.black),
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
-                                      decoration: booked.contains(time)
+                                      decoration: isBooked
                                           ? TextDecoration.lineThrough
                                           : TextDecoration.none,
                                       decorationThickness: 3.0,
@@ -147,15 +202,12 @@ class _SpecificTimeState extends State<SpecificTime> {
             ),
             Stack(
               children: [
-                SizedBox(height: 50),
+                const SizedBox(height: 50),
                 if (selectedTime != -1)
                   Align(
                     alignment: Alignment.center,
                     child: ElevatedButton(
                       onPressed: () {
-                        setState(() {
-                          booked.add(timeslots[selectedTime]);
-                        });
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -168,7 +220,7 @@ class _SpecificTimeState extends State<SpecificTime> {
                           ),
                         );
                       },
-                      child: Text("Next"),
+                      child: const Text("Next"),
                     ),
                   ),
               ],

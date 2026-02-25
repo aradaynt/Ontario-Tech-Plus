@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ontario_tech_plus/appointments/weekSelector.dart';
 import '../booking.dart';
 import '../student.dart';
@@ -16,65 +17,70 @@ class _AppointmentPageState extends State<AppointmentPage> {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: Text("Booking")),
-      body: Column(
-        children: [
-          SizedBox(height: 20),
-          Card(
-            margin: EdgeInsets.only(left: 10, right: 10),
-            color: colorScheme.primary,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    "Would you like to Book a Room ",
-                    style: TextStyle(
-                      color: colorScheme.onPrimary,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+      body: Center(
+        child: Column(
+          children: [
+            SizedBox(height: 20),
+            Card(
+              margin: EdgeInsets.only(left: 10, right: 10),
+              color: colorScheme.primary,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Would you like to Book a Room ",
+                      style: TextStyle(
+                        color: colorScheme.onPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  Text(
-                    "or",
-                    style: TextStyle(
-                      color: colorScheme.onPrimary,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                    Text(
+                      "or",
+                      style: TextStyle(
+                        color: colorScheme.onPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  Text(
-                    " Schedule an Appointment",
-                    style: TextStyle(
-                      color: colorScheme.onPrimary,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                    Text(
+                      " Schedule an Appointment",
+                      style: TextStyle(
+                        color: colorScheme.onPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          SizedBox(height: 60),
-          ElevatedButton(
-            onPressed: (() => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => bookingpage()),
-            )),
-            child: Text("Book Room"),
-          ),
-          SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: (() => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => appointmentbookingpage()),
-            )),
-            child: Text("Schedule Appointment"),
-          ),
-        ],
+            SizedBox(height: 60),
+            ElevatedButton(
+              onPressed: (() => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => bookingpage()),
+              )),
+              child: Text("Book Room"),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: (() => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => appointmentbookingpage(),
+                ),
+              )),
+              child: Text("Schedule Appointment"),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -87,129 +93,111 @@ class appointmentbookingpage extends StatefulWidget {
 }
 
 class _appointmentbookingPageState extends State<appointmentbookingpage> {
-  Dates date1 = Dates(
-    "Monday",
-    TimeOfDay(hour: 10, minute: 0),
-    TimeOfDay(hour: 12, minute: 0),
-  );
-  Dates date2 = Dates(
-    "Tuesday",
-    TimeOfDay(hour: 10, minute: 0),
-    TimeOfDay(hour: 12, minute: 0),
-  );
-  Dates date3 = Dates(
-    "Wednesday",
-    TimeOfDay(hour: 14, minute: 0),
-    TimeOfDay(hour: 16, minute: 0),
-  );
-  Dates date4 = Dates(
-    "Thursday",
-    TimeOfDay(hour: 14, minute: 0),
-    TimeOfDay(hour: 16, minute: 0),
-  );
-  Dates date5 = Dates(
-    "Wednesday",
-    TimeOfDay(hour: 15, minute: 40),
-    TimeOfDay(hour: 17, minute: 0),
-  );
-  Dates date6 = Dates(
-    "Friday",
-    TimeOfDay(hour: 15, minute: 40),
-    TimeOfDay(hour: 17, minute: 0),
-  );
-  Dates date7 = Dates(
-    "Tuesday",
-    TimeOfDay(hour: 9, minute: 40),
-    TimeOfDay(hour: 11, minute: 0),
-  );
-  Dates date8 = Dates(
-    "Thursday",
-    TimeOfDay(hour: 9, minute: 40),
-    TimeOfDay(hour: 11, minute: 0),
-  );
-  late Instructor instructor1 = Instructor(
-    name: "Ali Neshati",
-    email: "aradaynt14@gmail.com",
-    office: "UA4051",
-    officehours: [date1, date2],
-  );
-  late Instructor instructor2 = Instructor(
-    name: "Ken Pu",
-    email: "ken.pu@gmail.com",
-    office: "UA4052",
-    officehours: [date3, date4],
-  );
-  late Instructor instructor3 = Instructor(
-    name: "Cristiano Politowsky",
-    email: "cristiano.politowsky@gmail.com",
-    office: "UA2065",
-    officehours: [date4, date5],
-  );
-  late Instructor advisor1 = Instructor(
-    name: "Advisor - Jenna Golazzo",
-    email: "jenna.golazzo@gmail.com",
-    office: "UA2045",
-    officehours: [date1, date2, date3, date4],
-  );
-  late Instructor advisor2 = Instructor(
-    name: "Advisor - Other one",
-    email: "other.one@gmail.com",
-    office: "UA2044",
-    officehours: [date1, date2, date3, date4],
-  );
-  late Course course1 = Course(
-    name: "Advance Mobile Devices",
-    code: "CSCI 4101U",
-    when: [date5, date6],
-    location: "SHA247",
-    instructor: instructor1,
-    sessiontype: SessionType.lecture,
-  );
-  late Course course2 = Course(
-    name: "Machine Learning 2",
-    code: "CSCI 4052U",
-    when: [date7, date8],
-    location: "SHA248",
-    instructor: instructor2,
-    sessiontype: SessionType.lecture,
-  );
-  late Course course3 = Course(
-    name: "Interactive Media",
-    code: "CSCI 4160U",
-    when: [date1],
-    location: "UB2054",
-    instructor: instructor3,
-    sessiontype: SessionType.lecture,
-  );
-  late Course course4 = Course(
-    name: "Software Quality Assurance",
-    code: "CSCI 3060U",
-    when: [date2],
-    location: "UA 1140",
-    instructor: instructor3,
-    sessiontype: SessionType.lecture,
-  );
+  bool _isLoading = true;
+  List<Instructor> scienceAdvisors = [];
+  List<Instructor> uniqueProfessors = [];
+  late List<Instructor> fullList;
+  int selectedIndex = -1;
+  int selectedDate = -1;
+
+  // Keeping student data for UI logic, but with empty courses
   late Student student1 = Student(
     name: "Arad Ayntabli",
     studentid: 100845722,
     program: "Computer Science",
-    faculty: "Science",
+    faculty: "science",
     year: 4,
-    courses: [course1, course2, course3, course4],
+    courses: [],
   );
-  late List<Instructor> uniqueProfessors;
-  int selectedIndex = -1;
-  late List<Instructor> scienceAdvisors = [advisor1, advisor2];
-  late List<Instructor> fullList;
-  int selectedDate = -1;
 
   @override
   void initState() {
     super.initState();
-    uniqueProfessors = student1.courses
-        .map((course) => course.instructor)
-        .toSet()
-        .toList();
+    _fetchInstructorData();
+  }
+
+  Future<void> _fetchInstructorData() async {
+    try {
+      final supabase = Supabase.instance.client;
+
+      // 1. Check Connection/Query
+      final instructorResponse = await supabase.from('instructor').select();
+      print('Raw Instructor Data: $instructorResponse'); // DEBUG 1
+
+      final officeHoursResponse = await supabase.from('officeHours').select();
+      print('Raw Office Hours: $officeHoursResponse'); // DEBUG 2
+
+      final Map<int, List<Dates>> officeHoursByProfId = {};
+
+      for (var oh in officeHoursResponse) {
+        // Use .toString() and int.parse to avoid int8 vs int64 mismatches
+        final profId = int.parse(oh['prof_id'].toString());
+
+        // Safety check for null times
+        if (oh['start'] == null || oh['end'] == null) continue;
+
+        final timePartsStart = (oh['start'] as String).split(':');
+        final timePartsEnd = (oh['end'] as String).split(':');
+
+        final officeHour = Dates(
+          oh['day'],
+          TimeOfDay(
+            hour: int.parse(timePartsStart[0]),
+            minute: int.parse(timePartsStart[1]),
+          ),
+          TimeOfDay(
+            hour: int.parse(timePartsEnd[0]),
+            minute: int.parse(timePartsEnd[1]),
+          ),
+        );
+
+        officeHoursByProfId.putIfAbsent(profId, () => []).add(officeHour);
+      }
+
+      final List<Instructor> fetchedScienceAdvisors = [];
+      final List<Instructor> fetchedUniqueProfessors = [];
+
+      for (var data in instructorResponse) {
+        final id = int.parse(data['id'].toString());
+        final type = (data['type'] ?? '').toString().toLowerCase();
+        final faculty = (data['faculty'] ?? '').toString().toLowerCase();
+        final office = (data['office'] ?? '').toString();
+
+        final instructor = Instructor(
+          id: id,
+          name: data['name'] ?? 'Unknown',
+          email: data['email'] ?? '',
+          type: type,
+          faculty: faculty,
+          office: office,
+          officehours: officeHoursByProfId[id] ?? [],
+        );
+
+        // Match against lowercase "science" to be safe
+        if (type == 'advisor' && faculty == 'science') {
+          fetchedScienceAdvisors.add(instructor);
+        } else if (type == 'professor') {
+          fetchedUniqueProfessors.add(instructor);
+        }
+      }
+
+      print('Advisors found: ${fetchedScienceAdvisors.length}'); // DEBUG 3
+      print('Profs found: ${fetchedUniqueProfessors.length}'); // DEBUG 4
+
+      if (mounted) {
+        setState(() {
+          scienceAdvisors = fetchedScienceAdvisors;
+          uniqueProfessors = fetchedUniqueProfessors;
+          _isLoading = false;
+        });
+      }
+    } catch (e, stacktrace) {
+      print('CRITICAL ERROR: $e');
+      print('STACKTRACE: $stacktrace');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Widget buildlistview(ColorScheme colorScheme, List<Instructor> instructors) {
@@ -288,7 +276,14 @@ class _appointmentbookingPageState extends State<appointmentbookingpage> {
 
   @override
   Widget build(BuildContext context) {
-    if (student1.faculty == "Science") {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: Text("Schedule an Appointment")),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (student1.faculty == "science") {
       fullList = [...scienceAdvisors, ...uniqueProfessors];
     } else {
       fullList = uniqueProfessors;
@@ -296,125 +291,148 @@ class _appointmentbookingPageState extends State<appointmentbookingpage> {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: Text("Schedule an Appointment")),
-      body: Column(
-        children: [
-          SizedBox(height: 20),
-          Card(
-            color: colorScheme.primary,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                student1.name,
-                style: TextStyle(
-                  color: colorScheme.onPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+      body: Center(
+        child: Column(
+          children: [
+            /*
+            Don't really need this, but I will leave this in case I need it
+            SizedBox(height: 10),
+            Card(
+              color: colorScheme.primary,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  student1.name,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: colorScheme.onPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-          ),
-          SizedBox(height: 20),
-          buildlistview(colorScheme, fullList),
-          SizedBox(height: 20),
-          if (selectedIndex != -1)
-            Column(
-              children: [
-                Card(
-                  color: colorScheme.primary,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      "Select a Time",
-                      style: TextStyle(
-                        color: colorScheme.onPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+
+             */
+            SizedBox(height: 10),
+            if (fullList.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text('No instructors available.'),
+              )
+            else
+              buildlistview(colorScheme, fullList),
+            SizedBox(height: 10),
+            if (selectedIndex != -1) ...[
+              Card(
+                color: colorScheme.primary,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    "Select a Time",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: colorScheme.onPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                ListView.builder(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  itemCount: fullList[selectedIndex].officehours.length,
-                  itemBuilder: (context, index) {
-                    final time = fullList[selectedIndex].officehours[index];
-                    final isSelected = selectedDate == index;
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          if (isSelected) {
-                            selectedDate = -1;
-                          } else {
-                            selectedDate = index;
-                          }
-                        });
-                        print("Selected: ${time.toString()}");
-                      },
-                      child: Container(
-                        width: 160,
-                        margin: const EdgeInsets.only(right: 12),
-                        child: Card(
-                          color: isSelected
-                              ? colorScheme.primary
-                              : Colors.white,
-                          elevation: isSelected ? 4 : 1,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                              color: isSelected
-                                  ? colorScheme.primary
-                                  : Colors.transparent,
-                              width: isSelected ? 2 : 1,
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  time.toString(),
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? colorScheme.onPrimary
-                                        : Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+              ),
+              Expanded(
+                child: fullList[selectedIndex].officehours.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No office hours available for this instructor.',
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        itemCount: fullList[selectedIndex].officehours.length,
+                        itemBuilder: (context, index) {
+                          final time =
+                              fullList[selectedIndex].officehours[index];
+                          final isSelected = selectedDate == index;
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                if (isSelected) {
+                                  selectedDate = -1;
+                                } else {
+                                  selectedDate = index;
+                                }
+                              });
+                              print("Selected: ${time.toString()}");
+                            },
+                            child: Center(
+                              child: Container(
+                                width: 300,
+                                margin: const EdgeInsets.symmetric(vertical: 4),
+                                child: Card(
+                                  color: isSelected
+                                      ? colorScheme.secondary
+                                      : Colors.white,
+                                  elevation: isSelected ? 4 : 1,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: BorderSide(
+                                      color: isSelected
+                                          ? colorScheme.primary
+                                          : Colors.transparent,
+                                      width: isSelected ? 2 : 1,
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          time.toString(),
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: isSelected
+                                                ? colorScheme.onPrimary
+                                                : Colors.black,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          Spacer(),
-          if (selectedDate != -1)
-            ElevatedButton(
-              onPressed: (() => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WeekSelection(
-                    instructor: fullList[selectedIndex],
-                    student: student1,
-                    date: fullList[selectedIndex].officehours[selectedDate],
+              ),
+            ],
+            if (selectedDate != -1) ...[
+              SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: (() => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => WeekSelection(
+                      instructor: fullList[selectedIndex],
+                      student: student1,
+                      date: fullList[selectedIndex].officehours[selectedDate],
+                    ),
                   ),
-                ),
-              )),
-              child: Text("Next"),
-            ),
-          SizedBox(height: 60),
-        ],
+                )),
+                child: Text("Next"),
+              ),
+            ],
+            SizedBox(height: 60),
+          ],
+        ),
       ),
     );
   }

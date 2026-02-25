@@ -1,6 +1,7 @@
 import 'package:emailjs/emailjs.dart' as emailjs;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../student.dart';
 import 'appointment.dart';
@@ -10,6 +11,7 @@ class EmailPage extends StatefulWidget {
   final Student student;
   final Dates date;
   final String? week;
+
   const EmailPage({
     super.key,
     required this.instructor,
@@ -17,6 +19,7 @@ class EmailPage extends StatefulWidget {
     required this.date,
     required this.week,
   });
+
   @override
   State<EmailPage> createState() => _EmailPageState();
 }
@@ -27,31 +30,77 @@ class _EmailPageState extends State<EmailPage> {
   String subject = '';
   String body = '';
   late String instructorEmail = widget.instructor.email;
-  Future<void> loadFile() async {
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFile();
+  }
+
+  Future<void> _loadFile() async {
     await dotenv.load(fileName: ".env");
+    if (mounted) setState(() {});
+  }
+
+  String formatTime(TimeOfDay time) {
+    final h = time.hour.toString().padLeft(2, '0');
+    final m = time.minute.toString().padLeft(2, '0');
+    return '$h:$m:00';
+  }
+
+  String _formatDateForSupabase(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '';
+
+    try {
+      final cleanStr = dateStr.replaceAll(',', '');
+      final parts = cleanStr.split(' ');
+
+      if (parts.length < 3) return dateStr;
+
+      const months = {
+        'January': '01',
+        'February': '02',
+        'March': '03',
+        'April': '04',
+        'May': '05',
+        'June': '06',
+        'July': '07',
+        'August': '08',
+        'September': '09',
+        'October': '10',
+        'November': '11',
+        'December': '12',
+      };
+
+      final month = months[parts[0]] ?? '01';
+      final day = parts[1].padLeft(2, '0');
+      final year = parts[2];
+
+      return '$year-$month-$day';
+    } catch (e) {
+      return dateStr;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    //final colorScheme = Theme.of(context).colorScheme;
-    loadFile();
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      appBar: AppBar(title: Text("Reason for Appointment")),
+      appBar: AppBar(title: const Text("Reason for Appointment")),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: 10),
-          Padding(
-            padding: EdgeInsetsGeometry.only(left: 30),
+          const SizedBox(height: 10),
+          const Padding(
+            padding: EdgeInsets.only(left: 30),
             child: Text(
               "Please explain the purpose of your appointment.",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
           Padding(
-            padding: EdgeInsetsGeometry.only(left: 16, right: 16, bottom: 16),
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
             child: Card(
               child: Padding(
                 padding: const EdgeInsets.all(4.0),
@@ -64,7 +113,10 @@ class _EmailPageState extends State<EmailPage> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.0),
-                      borderSide: BorderSide(color: Colors.grey, width: 2.0),
+                      borderSide: const BorderSide(
+                        color: Colors.grey,
+                        width: 2.0,
+                      ),
                     ),
                   ),
                   onChanged: (value) {
@@ -77,10 +129,9 @@ class _EmailPageState extends State<EmailPage> {
             ),
           ),
           Padding(
-            padding: EdgeInsetsGeometry.all(16),
+            padding: const EdgeInsets.all(16),
             child: Card(
-              child: SizedBox(
-                height: 500,
+              child: Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(4.0),
                   child: TextFormField(
@@ -94,7 +145,10 @@ class _EmailPageState extends State<EmailPage> {
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10.0),
-                        borderSide: BorderSide(color: Colors.grey, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: Colors.grey,
+                          width: 2.0,
+                        ),
                       ),
                     ),
                     onChanged: (value) {
@@ -112,11 +166,17 @@ class _EmailPageState extends State<EmailPage> {
               alignment: Alignment.center,
               child: ElevatedButton(
                 onPressed: () async {
-                  print("Sending to: $instructorEmail");
-                  print(
-                    "Student Email: ${widget.student.name.toLowerCase().replaceAll(' ', '.')}@gmail.com",
-                  );
                   try {
+                    final supabase = Supabase.instance.client;
+
+                    await supabase.from('booked').insert({
+                      'prof_id': widget.instructor.id,
+                      'student_name': widget.student.name,
+                      'start': formatTime(widget.date.start),
+                      'end': formatTime(widget.date.end),
+                      'date': _formatDateForSupabase(widget.week),
+                    });
+
                     await emailjs.send(
                       'service_6znzzht',
                       'template_89bpfms',
@@ -137,32 +197,52 @@ class _EmailPageState extends State<EmailPage> {
 
                     _subjectController.clear();
                     _bodyController.clear();
-                    subject = '';
-                    body = '';
+                    setState(() {
+                      subject = '';
+                      body = '';
+                    });
 
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Email sent successfully!')),
+                        const SnackBar(
+                          content: Text('Email sent and appointment booked!'),
+                        ),
                       );
-                      Navigator.push(
+                      Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const AppointmentPage(),
                         ),
+                        (route) => route.isFirst,
                       );
                     }
                   } catch (error) {
+                    print("Error booking appointment: $error");
                     if (error is emailjs.EmailJSResponseStatus) {
-                      print('Status: ${error.status}');
-                      print('Error Text: ${error.text}');
+                      print('Email Status: ${error.status}');
+                      print('Email Error Text: ${error.text}');
+                    }
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to book appointment: $error'),
+                        ),
+                      );
                     }
                   }
                 },
-                child: Text("Send"),
+                child: const Text("Send"),
               ),
             ),
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _subjectController.dispose();
+    _bodyController.dispose();
+    super.dispose();
   }
 }

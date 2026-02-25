@@ -18,6 +18,8 @@ class WeekSelection extends StatefulWidget {
 }
 
 class _WeekSelectionState extends State<WeekSelection> {
+  final year = DateTime.now().year;
+
   List<DateTime> getFutureWeekMondays(String dayOfWeek) {
     final DateTime today = DateTime.now();
     DateTime semesterStart;
@@ -173,7 +175,8 @@ class _WeekSelectionState extends State<WeekSelection> {
                               instructor: widget.instructor,
                               student: widget.student,
                               date: widget.date,
-                              weekLabel: selectedWeekString,
+                              weekLabel:
+                                  "$selectedWeekString, ${year.toString()}",
                             ),
                           ),
                         );
