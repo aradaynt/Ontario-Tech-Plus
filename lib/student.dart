@@ -13,7 +13,7 @@ class Student {
     required this.program,
     required this.faculty,
     required this.year,
-    required this.courses,
+    required List<Course> this.courses,
   });
   void addCourse(Course course) {
     courses.add(course);
