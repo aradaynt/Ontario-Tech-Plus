@@ -5,17 +5,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:ontario_tech_plus/auth/auth_providers.dart';
-import 'package:ontario_tech_plus/core/global_providers/user_provider.dart';
+import 'package:ontario_tech_plus/profile/profile_provider.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // read the auth for signout
-    final auth = ref.read(authServiceProvider);
-
     // get the profile data, and will reactively rebuild on changes (Currently housed in user_provider.dart)
     final profileAsync = ref.watch(profileProvider);
 
@@ -37,27 +33,21 @@ class HomePage extends ConsumerWidget {
 
       // Profile load success
       data: (profile) {
-        // If no profile row exists
+        // If no profile data found
         if (profile == null) {
           return const Scaffold(body: Center(child: Text("No profile found")));
         }
 
-        // Extract data from map
-        final firstName = profile['firstname'];
-        final lastName = profile['lastname'];
-        final studentNumber = profile['student_number'];
-
         // ================== Build the page ======================
         return Scaffold(
-          //App bar
           appBar: AppBar(
             title: const Text("Home"),
             actions: [
-              // Add a signout button at the top
+              // Go to profile
               IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: () async {
-                  await auth.signOut();
+                icon: const Icon(Icons.person),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/profile');
                 },
               ),
             ],
@@ -68,41 +58,17 @@ class HomePage extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Welcome message
                 Text(
-                  "Welcome $firstName $lastName 👋",
+                  "Welcome ${profile.firstname} ${profile.lastname} 👋",
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
-                // Student number
                 Text(
-                  "Student Number: $studentNumber",
+                  "Student Number: ${profile.studentNumber}",
                   style: const TextStyle(fontSize: 18),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Actual signout button
-                ElevatedButton(
-                  onPressed: () async {
-                    await auth.signOut();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 14,
-                    ),
-                  ),
-                  child: const Text(
-                    "Sign Out",
-                    style: TextStyle(color: Colors.white),
-                  ),
                 ),
               ],
             ),

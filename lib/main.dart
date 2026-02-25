@@ -10,7 +10,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:ontario_tech_plus/auth/auth_providers.dart';
 import 'package:ontario_tech_plus/auth/login_page.dart';
 
-import 'package:ontario_tech_plus/shell_page.dart'; //This page
+import 'package:ontario_tech_plus/profile/profile_page.dart'; // To display the users name and student number
+
+import 'package:ontario_tech_plus/shell_page.dart'; //This page is the shell for the nav bar
 
 Future<void> main() async {
   //Ensures Flutter engine/bindings are ready before doing async work
@@ -49,7 +51,7 @@ class MyApp extends ConsumerWidget {
       ),
       routes: {
         // Empty for now, but will be for any page pushing later. Example:
-        // '/profile': (_) => const ProfilePage(),
+        '/profile': (_) => const ProfilePage(),
       },
       // Routing
       home: authState.when(
