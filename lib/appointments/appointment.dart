@@ -2,7 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ontario_tech_plus/appointments/weekSelector.dart';
-import '../booking.dart';
 import '../student.dart';
 
 class AppointmentPage extends StatefulWidget {
@@ -12,87 +11,6 @@ class AppointmentPage extends StatefulWidget {
 }
 
 class _AppointmentPageState extends State<AppointmentPage> {
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Scaffold(
-      appBar: AppBar(title: Text("Booking")),
-      body: Center(
-        child: Column(
-          children: [
-            SizedBox(height: 20),
-            Card(
-              margin: EdgeInsets.only(left: 10, right: 10),
-              color: colorScheme.primary,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Would you like to Book a Room ",
-                      style: TextStyle(
-                        color: colorScheme.onPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    Text(
-                      "or",
-                      style: TextStyle(
-                        color: colorScheme.onPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    Text(
-                      " Schedule an Appointment",
-                      style: TextStyle(
-                        color: colorScheme.onPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(height: 60),
-            ElevatedButton(
-              onPressed: (() => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => bookingpage()),
-              )),
-              child: Text("Book Room"),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: (() => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => appointmentbookingpage(),
-                ),
-              )),
-              child: Text("Schedule Appointment"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class appointmentbookingpage extends StatefulWidget {
-  const appointmentbookingpage({super.key});
-  @override
-  State<appointmentbookingpage> createState() => _appointmentbookingPageState();
-}
-
-class _appointmentbookingPageState extends State<appointmentbookingpage> {
   bool _isLoading = true;
   List<Instructor> scienceAdvisors = [];
   List<Instructor> uniqueProfessors = [];
@@ -294,15 +212,13 @@ class _appointmentbookingPageState extends State<appointmentbookingpage> {
       body: Center(
         child: Column(
           children: [
-            /*
-            Don't really need this, but I will leave this in case I need it
             SizedBox(height: 10),
             Card(
               color: colorScheme.primary,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Text(
-                  student1.name,
+                  "Select an Instructor:",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: colorScheme.onPrimary,
@@ -313,7 +229,6 @@ class _appointmentbookingPageState extends State<appointmentbookingpage> {
               ),
             ),
 
-             */
             SizedBox(height: 10),
             if (fullList.isEmpty)
               Padding(
