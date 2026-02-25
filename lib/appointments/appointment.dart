@@ -37,21 +37,22 @@ class _AppointmentPageState extends State<AppointmentPage> {
   Future<void> _fetchInstructorData() async {
     try {
       final supabase = Supabase.instance.client;
-
-      // 1. Check Connection/Query
       final instructorResponse = await supabase.from('instructor').select();
-      print('Raw Instructor Data: $instructorResponse'); // DEBUG 1
 
-      final officeHoursResponse = await supabase.from('officeHours').select();
-      print('Raw Office Hours: $officeHoursResponse'); // DEBUG 2
+      final officeHoursResponse = await supabase.from('office_hours').select('''
+        id, start, end, day,
+        course_instructors!inner (
+          instructor_id
+        )
+      ''');
 
       final Map<int, List<Dates>> officeHoursByProfId = {};
 
       for (var oh in officeHoursResponse) {
-        // Use .toString() and int.parse to avoid int8 vs int64 mismatches
-        final profId = int.parse(oh['prof_id'].toString());
+        final profId = int.parse(
+          oh['course_instructors']['instructor_id'].toString(),
+        );
 
-        // Safety check for null times
         if (oh['start'] == null || oh['end'] == null) continue;
 
         final timePartsStart = (oh['start'] as String).split(':');
@@ -91,16 +92,12 @@ class _AppointmentPageState extends State<AppointmentPage> {
           officehours: officeHoursByProfId[id] ?? [],
         );
 
-        // Match against lowercase "science" to be safe
         if (type == 'advisor' && faculty == 'science') {
           fetchedScienceAdvisors.add(instructor);
         } else if (type == 'professor') {
           fetchedUniqueProfessors.add(instructor);
         }
       }
-
-      print('Advisors found: ${fetchedScienceAdvisors.length}'); // DEBUG 3
-      print('Profs found: ${fetchedUniqueProfessors.length}'); // DEBUG 4
 
       if (mounted) {
         setState(() {
