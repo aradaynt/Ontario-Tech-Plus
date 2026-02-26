@@ -225,11 +225,15 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     ]),
   ];
 
-  // animations
+  // selection animations
   late AnimationController _selectionAnimationController;
   late Animation<Color?> _polygonColorAnimation;
   late Animation<double> _borderWidthAnimation;
   late Animation<Offset> _slideAnimation;
+
+  // route polyline animation
+  late AnimationController _routeAnimationController;
+  late Animation<double> _routeAnimation;
 
   // boolean variables for program control
   bool _isRouting = false;
@@ -278,6 +282,18 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
             curve: Curves.easeOutBack,
           ),
         );
+
+    _routeAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+
+    _routeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _routeAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
 
     // trigger map rebuilds on every animation frame
     _selectionAnimationController.addListener(() {
@@ -375,13 +391,21 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                     setState(() {
                       _selectedBuilding = tappedBuilding;
                       _isRouting = true;
+                      _mapController.move(_selectedBuilding!.centre, 16.5);
 
-                      // ONLY fetch the route once when a new building is selected!
                       if (_currentPosition != null) {
-                        _routeFuture = fetchRoute(
-                          _currentPosition!,
-                          _selectedBuilding!.centre,
-                        );
+                        _routeAnimationController.reset(); // Reset the line
+
+                        _routeFuture =
+                            fetchRoute(
+                              _currentPosition!,
+                              _selectedBuilding!.centre,
+                            )..then((_) {
+                              // Play the animation once the future completes
+                              if (mounted && _isRouting) {
+                                _routeAnimationController.forward();
+                              }
+                            });
                       }
                     });
 
@@ -403,14 +427,6 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                   ),
               ],
             ),
-            // the Attribution Layer used to credit the map provider
-            if (_showAttribution)
-              SimpleAttributionWidget(
-                source: Text(
-                  "OpenStreetMap Contributors\n"
-                  " OpenStreetRoutingMachine",
-                ),
-              ),
             if (_isRouting && _routeFuture != null)
               FutureBuilder<List<PointLatLng>>(
                 future: _routeFuture, // Use the stored future!
@@ -419,24 +435,60 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                     // Optional: Show a loading indicator while the route fetches
                     return const Center(child: CircularProgressIndicator());
                   } else if (snapshot.hasData) {
-                    return PolylineLayer(
-                      polylines: [
-                        Polyline(
-                          points: [
-                            for (var point in snapshot.data!)
-                              LatLng(point.latitude, point.longitude),
+                    return AnimatedBuilder(
+                      animation: _routeAnimation,
+                      builder: (context, child) {
+                        // Calculate how many points to show based on the animation (0.0 to 1.0)
+                        int pointCount =
+                            (snapshot.data!.length * _routeAnimation.value)
+                                .ceil();
+
+                        // Grab only the visible points
+                        List<LatLng> animatedPoints = snapshot.data!
+                            .take(pointCount)
+                            .map((p) => LatLng(p.latitude, p.longitude))
+                            .toList();
+
+                        return PolylineLayer(
+                          polylines: [
+                            // A Polyline needs at least 2 points to be drawn on the canvas
+                            if (animatedPoints.length > 1)
+                              Polyline(
+                                points: animatedPoints,
+                                color: Colors.deepOrange,
+                                strokeWidth:
+                                    4, // Slightly thicker looks better animated
+                              ),
                           ],
-                          color: Colors.deepOrange,
-                          strokeWidth: 3,
-                        ),
-                      ],
+                        );
+                      },
                     );
+                    //   PolylineLayer(
+                    //   polylines: [
+                    //     Polyline(
+                    //       points: [
+                    //         for (var point in snapshot.data!)
+                    //           LatLng(point.latitude, point.longitude),
+                    //       ],
+                    //       color: Colors.deepOrange,
+                    //       strokeWidth: 3,
+                    //     ),
+                    //   ],
+                    // );
                   } else if (snapshot.hasError) {
                     // Handle any API errors gracefully
                     return Center(child: Text('Error loading route'));
                   }
                   return Container();
                 },
+              ),
+            // the Attribution Layer used to credit the map provider
+            if (_showAttribution)
+              SimpleAttributionWidget(
+                source: Text(
+                  "OpenStreetMap Contributors\n"
+                  " OpenStreetRoutingMachine",
+                ),
               ),
           ],
         ),
@@ -506,6 +558,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   void dispose() {
     // dispose of position stream
     _selectionAnimationController.dispose();
+    _routeAnimationController.dispose();
     _positionStreamSubscription?.cancel();
     super.dispose();
   }
