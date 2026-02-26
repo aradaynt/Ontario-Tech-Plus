@@ -24,6 +24,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _studentNumberController = TextEditingController();
+  final _programController = TextEditingController();
+
+  String? _selectedFaculty;
+  String? _selectedYear;
+
+  final List<String> _faculties = [
+    "Science",
+    "Engineering",
+    "Business",
+    "Health Sciences",
+    "Education",
+    "Social Science & Humanities",
+  ];
+
+  final List<String> _years = ["1", "2", "3", "4", "5+"];
 
   bool _isLogin = true;
   bool _loading = false;
@@ -54,11 +69,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           _firstNameController.text.trim(),
           _lastNameController.text.trim(),
           _studentNumberController.text.trim(),
+          _programController.text.trim(),
+          _selectedFaculty!,
+          _selectedYear!,
         );
       }
     } catch (e) {
       setState(() {
-        _error = "Authentication failed. Please try again.";
+        _error = "An error has occured. Please try again.";
       });
     } finally {
       if (mounted) {
@@ -90,6 +108,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _studentNumberController.dispose();
+    _programController.dispose();
     super.dispose();
   }
 
@@ -199,6 +218,43 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     keyboardType: TextInputType.number,
                     validator: _validateStudentNumber,
                     textInputAction: TextInputAction.next,
+                  ),
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: _programController,
+                    decoration: const InputDecoration(labelText: "Program"),
+                    validator: (v) => _validateRequired(v, "Program"),
+                    textInputAction: TextInputAction.next,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedFaculty,
+                    decoration: const InputDecoration(labelText: "Faculty"),
+                    items: _faculties
+                        .map((f) => DropdownMenuItem(value: f, child: Text(f)))
+                        .toList(),
+                    onChanged: (val) => setState(() => _selectedFaculty = val),
+                    validator: (v) => v == null ? "Faculty is required" : null,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedYear,
+                    decoration: const InputDecoration(labelText: "Year"),
+                    items: _years
+                        .map(
+                          (y) => DropdownMenuItem(
+                            value: y,
+                            child: Text("Year $y"),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) => setState(() => _selectedYear = val),
+                    validator: (v) => v == null ? "Year is required" : null,
                   ),
                   const SizedBox(height: 16),
                 ],
