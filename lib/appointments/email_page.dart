@@ -4,17 +4,19 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../student.dart';
-import 'appointment.dart';
+import 'appointment_landing.dart';
 
 class EmailPage extends StatefulWidget {
-  final Instructor instructor;
+  final Instructor? instructor;
+  final Advisor? advisor;
   final Student student;
   final Dates date;
   final String? week;
 
   const EmailPage({
     super.key,
-    required this.instructor,
+    this.instructor,
+    this.advisor,
     required this.student,
     required this.date,
     required this.week,
@@ -29,7 +31,7 @@ class _EmailPageState extends State<EmailPage> {
   final _bodyController = TextEditingController();
   String subject = '';
   String body = '';
-  late String instructorEmail = widget.instructor.email;
+  late String? instructorEmail = widget.instructor?.email;
 
   @override
   void initState() {
@@ -169,22 +171,39 @@ class _EmailPageState extends State<EmailPage> {
                   try {
                     final supabase = Supabase.instance.client;
 
-                    await supabase.from('booked').insert({
-                      'prof_id': widget.instructor.id,
-                      'student_name': widget.student.name,
+                    final isAdvisor = widget.advisor != null;
+
+                    final targetId = isAdvisor
+                        ? widget.advisor!.id
+                        : widget.instructor!.id;
+
+                    final targetEmail = isAdvisor
+                        ? widget.advisor!.email
+                        : widget.instructor!.email;
+
+                    final targetTable = isAdvisor ? 'advisor_booked' : 'booked';
+                    final targetColumn = isAdvisor ? 'advisor_id' : 'prof_id';
+
+                    await supabase.from(targetTable).insert({
+                      targetColumn: targetId,
+                      'student_id': widget.student.studentid,
                       'start': formatTime(widget.date.start),
                       'end': formatTime(widget.date.end),
                       'date': _formatDateForSupabase(widget.week),
                     });
 
+                    String courseLine = widget.date.courseCode != null
+                        ? "Course: ${widget.date.courseCode}\n"
+                        : "";
+
                     await emailjs.send(
                       'service_6znzzht',
                       'template_89bpfms',
                       {
-                        'email': instructorEmail,
+                        'email': targetEmail,
                         'subject': subject,
                         'message':
-                            "Appointment for: \n${widget.week}\n${widget.date.toString()}\nReason for this appointment is: \n$body",
+                            "${courseLine}Appointment for: \n${widget.week}\n${widget.date.toString()}\nReason for this appointment is: \n$body",
                         'user_email':
                             "${widget.student.name.toLowerCase().replaceAll(' ', '.')}@ontariotechu.net",
                         'name': widget.student.name,
@@ -211,7 +230,7 @@ class _EmailPageState extends State<EmailPage> {
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const AppointmentPage(),
+                          builder: (context) => const AppointmentTypePage(),
                         ),
                         (route) => route.isFirst,
                       );
