@@ -523,6 +523,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       return;
     }
 
+    // Make sure student number is valid (numeric, 9 chars)
+    final studentNumberError = _validateStudentNumber(studentNumber);
+    // Return error if not valid
+    if (studentNumberError != null) {
+      _snack(studentNumberError);
+      return;
+    }
+
     // Set is saving to true
     setState(() => _isSaving = true);
 
@@ -549,11 +557,39 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       _snack("Profile updated.");
     } catch (e) {
       // display a user friendly message on update failure
-      _snack("Profile could not be updated.");
+      _snack(_friendlyUpdateErrorMessage(e.toString()));
     } finally {
       // set is saving to false no matter what success
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  // Helper function to validate the student number
+  String? _validateStudentNumber(String value) {
+    final val = value.trim();
+
+    if (!RegExp(r'^\d+$').hasMatch(val)) {
+      return "Student number must contain only digits.";
+    }
+    if (val.length != 9) {
+      return "Student number must be exactly 9 digits.";
+    }
+    return null;
+  }
+
+  // Helper function to take supabase jargon and turn it into user friendly message
+  String _friendlyUpdateErrorMessage(String raw) {
+    final msg = raw.toLowerCase();
+
+    // Unique constraint / duplicate student number
+    if (msg.contains('duplicate') ||
+        msg.contains('unique') ||
+        msg.contains('profiles_student_number_key') ||
+        msg.contains('student_number')) {
+      return "Issue with student number.";
+    }
+
+    return "Profile could not be updated.";
   }
 
   // Helper function for the snack bar
