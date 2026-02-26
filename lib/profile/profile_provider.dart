@@ -16,7 +16,9 @@ final profileProvider = FutureProvider<Profile?>((ref) async {
 
   final data = await supabase
       .from('profiles')
-      .select('firstname, lastname, email, student_number')
+      .select(
+        'firstname, lastname, email, student_number, program, faculty, year',
+      )
       .eq('id', user.id)
       .maybeSingle();
 
@@ -30,12 +32,20 @@ final profileProvider = FutureProvider<Profile?>((ref) async {
 class ProfileUpdatePayload {
   final String firstname;
   final String lastname;
+  final String email;
   final String studentNumber;
+  final String program;
+  final String faculty;
+  final String year;
 
   const ProfileUpdatePayload({
     required this.firstname,
     required this.lastname,
+    required this.email,
     required this.studentNumber,
+    required this.program,
+    required this.faculty,
+    required this.year,
   });
 }
 
@@ -67,7 +77,11 @@ class ProfileActions {
         .update({
           'firstname': payload.firstname.trim(),
           'lastname': payload.lastname.trim(),
+          'email': payload.email.trim(),
           'student_number': payload.studentNumber.trim(),
+          'program': payload.program.trim(),
+          'faculty': payload.faculty.trim(),
+          'year': payload.year.trim(),
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
         .eq('id', user.id);

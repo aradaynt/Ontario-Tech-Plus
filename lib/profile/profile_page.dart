@@ -32,6 +32,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _studentNumberController = TextEditingController();
+  final _programController = TextEditingController();
+
+  String? _selectedFaculty;
+  String? _selectedYear;
+
+  // All availible faculties, can pull from faculties database list later
+  final List<String> _faculties = [
+    "Science",
+    "Engineering",
+    "Business",
+    "Health Sciences",
+    "Education",
+    "Social Science & Humanities",
+  ];
+
+  // Availible years for a student
+  final List<String> _years = ["1", "2", "3", "4", "5+"];
 
   // Dispose of controllers to prevent memory leaks
   @override
@@ -39,6 +56,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _studentNumberController.dispose();
+    _programController.dispose();
     super.dispose();
   }
 
@@ -121,6 +139,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     _firstNameController.text = profile.firstname;
     _lastNameController.text = profile.lastname;
     _studentNumberController.text = profile.studentNumber;
+    _programController.text = profile.program;
+
+    _selectedFaculty = _faculties.contains(profile.faculty)
+        ? profile.faculty
+        : null;
+
+    _selectedYear = _years.contains(profile.year) ? profile.year : null;
   }
 
   // Build the actual profile content
@@ -250,14 +275,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     title: "First Name",
                     controller: _firstNameController,
                     enabled: !_isSaving,
-                    textInputAction: TextInputAction.next,
                   ),
                   _editTile(
                     icon: Icons.person_outline,
                     title: "Last Name",
                     controller: _lastNameController,
                     enabled: !_isSaving,
-                    textInputAction: TextInputAction.next,
                   ),
                 ],
 
@@ -284,6 +307,96 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     keyboardType: TextInputType.number,
                     textInputAction: TextInputAction.done,
                     helperText: "Must be exactly 9 digits.",
+                  ),
+
+                //Put a devider
+                const Divider(height: 12, indent: 16, endIndent: 16),
+
+                // Program
+                if (!_isEditing) // Not editting
+                  ListTile(
+                    leading: const Icon(Icons.school),
+                    title: const Text("Program"),
+                    subtitle: Text(profile.program),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                  )
+                else // Editting
+                  _editTile(
+                    icon: Icons.school,
+                    title: "Program",
+                    controller: _programController,
+                    enabled: !_isSaving,
+                  ),
+
+                //Put a devider
+                const Divider(height: 12, indent: 16, endIndent: 16),
+
+                // Faculty
+                if (!_isEditing) // Not editting
+                  ListTile(
+                    leading: const Icon(Icons.account_balance),
+                    title: const Text("Faculty"),
+                    subtitle: Text(profile.faculty),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                  )
+                else // Editting
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _selectedFaculty,
+                      decoration: const InputDecoration(labelText: "Faculty"),
+                      items: _faculties
+                          .map(
+                            (f) => DropdownMenuItem(value: f, child: Text(f)),
+                          )
+                          .toList(),
+                      onChanged: (val) =>
+                          setState(() => _selectedFaculty = val),
+                    ),
+                  ),
+
+                //Put a devider
+                const Divider(height: 12, indent: 16, endIndent: 16),
+
+                // Year
+                if (!_isEditing) // Not editting
+                  ListTile(
+                    leading: const Icon(Icons.calendar_today),
+                    title: const Text("Year"),
+                    subtitle: Text(profile.year),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                  )
+                else // Editting
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _selectedYear,
+                      decoration: const InputDecoration(labelText: "Year"),
+                      items: _years
+                          .map(
+                            (y) => DropdownMenuItem(
+                              value: y,
+                              child: Text("Year $y"),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (val) => setState(() => _selectedYear = val),
+                    ),
                   ),
               ],
             ),
@@ -402,9 +515,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final firstName = _firstNameController.text.trim();
     final lastName = _lastNameController.text.trim();
     final studentNumber = _studentNumberController.text.trim();
+    final program = _programController.text.trim();
 
     // Make sure the fields are not empty
-    if (firstName.isEmpty || lastName.isEmpty || studentNumber.isEmpty) {
+    if (firstName.isEmpty ||
+        lastName.isEmpty ||
+        studentNumber.isEmpty ||
+        program.isEmpty ||
+        _selectedFaculty == null ||
+        _selectedYear == null) {
       _snack("All fields are required.");
       return;
     }
@@ -428,7 +547,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ProfileUpdatePayload(
               firstname: firstName,
               lastname: lastName,
+              email: currentProfile.email,
               studentNumber: studentNumber,
+              program: program,
+              faculty: _selectedFaculty!,
+              year: _selectedYear!,
             ),
           );
 
@@ -439,6 +562,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           lastname: lastName,
           email: currentProfile.email,
           studentNumber: studentNumber,
+          program: program,
+          faculty: _selectedFaculty!,
+          year: _selectedYear!,
         );
         _isEditing = false; // Set iseditting to false
       });

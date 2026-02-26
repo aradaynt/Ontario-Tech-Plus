@@ -39,6 +39,9 @@ class AuthService {
     String firstName,
     String lastName,
     String studentNumber,
+    String program,
+    String faculty,
+    String year,
   ) async {
     final response = await _supabase.auth.signUp(
       email: email,
@@ -47,6 +50,9 @@ class AuthService {
         'firstname': firstName,
         'lastname': lastName,
         'student_number': studentNumber,
+        'program': program,
+        'faculty': faculty,
+        'year': year,
       },
     );
 

@@ -7,12 +7,18 @@ class Profile {
   final String lastname;
   final String email;
   final String studentNumber;
+  final String program;
+  final String faculty;
+  final String year;
 
   const Profile({
     required this.firstname,
     required this.lastname,
     required this.email,
     required this.studentNumber,
+    required this.program,
+    required this.faculty,
+    required this.year,
   });
 
   String get fullName => "$firstname $lastname";
@@ -23,6 +29,9 @@ class Profile {
       lastname: map['lastname'] as String,
       email: map['email'] as String,
       studentNumber: map['student_number'] as String,
+      program: map['program'] as String,
+      faculty: map['faculty'] as String,
+      year: map['year'] as String,
     );
   }
 }
