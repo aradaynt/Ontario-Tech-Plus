@@ -61,7 +61,7 @@ class MapsPage extends StatefulWidget {
 }
 
 // Maps Page State
-class _MapsPageState extends State<MapsPage> {
+class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   // geolocator platform
   final GeolocatorPlatform _geolocatorPlatform = GeolocatorPlatform.instance;
 
@@ -93,7 +93,10 @@ class _MapsPageState extends State<MapsPage> {
   // selected building
   Building? _selectedBuilding;
 
-  // Map buildings
+  // future route
+  Future<List<PointLatLng>>? _routeFuture;
+
+  // map buildings
   final List<Building> _buildings = [
     Building("Sha building", LatLng(43.946213, -78.896540), [
       LatLng(43.946327, -78.896870),
@@ -222,6 +225,11 @@ class _MapsPageState extends State<MapsPage> {
     ]),
   ];
 
+  // animations
+  late AnimationController _selectionAnimationController;
+  late Animation<Color?> _polygonColorAnimation;
+  late Animation<double> _borderWidthAnimation;
+
   // boolean variables for program control
   bool _isRouting = false;
   bool _isNavigating = false;
@@ -232,6 +240,37 @@ class _MapsPageState extends State<MapsPage> {
   void initState() {
     super.initState();
     _setupLocation();
+
+    // initialize the controller
+    _selectionAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    // define the color transition
+    _polygonColorAnimation =
+        ColorTween(
+          begin: Color(0xFF0077CA).withValues(alpha: 0.20),
+          end: Color(0xFF0077CA).withValues(alpha: 0.60),
+        ).animate(
+          CurvedAnimation(
+            parent: _selectionAnimationController,
+            curve: Curves.easeInOut,
+          ),
+        );
+
+    // define the border thickness transition
+    _borderWidthAnimation = Tween<double>(begin: 1.0, end: 3.0).animate(
+      CurvedAnimation(
+        parent: _selectionAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    // trigger map rebuilds on every animation frame
+    _selectionAnimationController.addListener(() {
+      setState(() {});
+    });
   }
 
   // build method
@@ -281,23 +320,59 @@ class _MapsPageState extends State<MapsPage> {
                     Polygon<Building>(
                       hitValue: building,
                       points: building.polygon,
-                      color: Color(0xFF0077CA).withValues(alpha: 0.20),
+                      // Conditionally change the color/opacity
+                      // if it's the selected building
+                      color:
+                          (_selectedBuilding?.name == building.name &&
+                              _isRouting)
+                          ? Color(0xFF0077CA).withValues(
+                              alpha: 0.60,
+                            ) // Darker/more opaque when selected
+                          : Color(0xFF0077CA).withValues(alpha: 0.20),
+                      // Default transparent look
                       borderColor: Color(0xFF003C71),
+                      // Thicker border when selected
+                      borderStrokeWidth:
+                          (_selectedBuilding?.name == building.name &&
+                              _isRouting)
+                          ? 3.0
+                          : 1.0,
                     ),
                 ],
               ),
               onTap: () {
-                setState(() {
-                  Building? tappedBuilding =
-                      _polygonHtNotifier.value?.hitValues[0];
+                Building? tappedBuilding =
+                    _polygonHtNotifier.value?.hitValues.isNotEmpty == true
+                    ? _polygonHtNotifier.value!.hitValues[0]
+                    : null;
 
-                  if (tappedBuilding?.name == _selectedBuilding?.name) {
+                if (tappedBuilding != null) {
+                  if (tappedBuilding.name == _selectedBuilding?.name) {
+                    // Tapping the same building: toggle routing and reverse animation
                     _isRouting = !_isRouting;
+                    if (_isRouting) {
+                      _selectionAnimationController.forward();
+                    } else {
+                      _selectionAnimationController.reverse();
+                    }
                   } else {
-                    _selectedBuilding = tappedBuilding;
-                    _isRouting = true;
+                    // Tapping a new building
+                    setState(() {
+                      _selectedBuilding = tappedBuilding;
+                      _isRouting = true;
+
+                      // ONLY fetch the route once when a new building is selected!
+                      if (_currentPosition != null) {
+                        _routeFuture = fetchRoute(
+                          _currentPosition!,
+                          _selectedBuilding!.centre,
+                        );
+                      }
+                    });
+
+                    _selectionAnimationController.forward(from: 0.0);
                   }
-                });
+                }
               },
             ),
             // the third layer is the MarkerLayer that is used to mark locations
@@ -318,15 +393,14 @@ class _MapsPageState extends State<MapsPage> {
               SimpleAttributionWidget(
                 source: Text("OpenStreetMap Contributors"),
               ),
-            //
-            if (_isRouting)
-              FutureBuilder(
-                future: fetchRoute(
-                  _currentPosition!,
-                  _selectedBuilding!.centre,
-                ),
+            if (_isRouting && _routeFuture != null)
+              FutureBuilder<List<PointLatLng>>(
+                future: _routeFuture, // Use the stored future!
                 builder: (context, snapshot) {
-                  if (snapshot.hasData) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    // Optional: Show a loading indicator while the route fetches
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasData) {
                     return PolylineLayer(
                       polylines: [
                         Polyline(
@@ -339,6 +413,9 @@ class _MapsPageState extends State<MapsPage> {
                         ),
                       ],
                     );
+                  } else if (snapshot.hasError) {
+                    // Handle any API errors gracefully
+                    return Center(child: Text('Error loading route'));
                   }
                   return Container();
                 },
@@ -382,6 +459,7 @@ class _MapsPageState extends State<MapsPage> {
   @override
   void dispose() {
     // dispose of position stream
+    _selectionAnimationController.dispose();
     _positionStreamSubscription?.cancel();
     super.dispose();
   }
@@ -466,8 +544,8 @@ class _MapsPageState extends State<MapsPage> {
           jsonDecode(response.body) as Map<String, dynamic>;
 
       String geometry = temp["routes"][0]["geometry"];
+      print("geometry = $geometry");
       List<PointLatLng> points = PolylinePoints.decodePolyline(geometry);
-
       // return the list of points that make up the polyline
       return points;
     } else {
