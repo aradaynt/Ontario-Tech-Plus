@@ -14,43 +14,6 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:http/http.dart' as http;
 import 'building.dart';
 
-// main function for testing
-void main() => runApp(const TestApp());
-
-// test app for testing
-class TestApp extends StatelessWidget {
-  const TestApp({super.key});
-
-  // creates app with appbar and bottom nav bar
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: "Maps Page",
-      theme: ThemeData(),
-      home: Scaffold(
-        appBar: AppBar(title: Text("Map")),
-        bottomNavigationBar: BottomNavigationBar(
-          items: [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_month_outlined),
-              label: "schedule",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              label: "Home",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.map_outlined),
-              label: "Map",
-            ),
-          ],
-        ),
-        body: MapsPage(),
-      ),
-    );
-  }
-}
-
 // Maps Page widget
 class MapsPage extends StatefulWidget {
   const MapsPage({super.key});
@@ -307,249 +270,252 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     // widget is organized into a stack with the map layer
     // as the bottom most element of the stack. All other
     // Widgets are rendered on-top of it
-    return Stack(
-      children: [
-        // The FlutterMap widget that constructs the map
-        FlutterMap(
-          // mapController defines how the map can be interacted with
-          mapController: _mapController,
-          // options sets the maps rules
-          options: _mapOptions,
-          // children contains all the layers that make up the map
-          children: [
-            // First layer is the tile layer, this layer makes a call
-            // to a tile provider and displays it. This layer is wrapped
-            // in a gesture detector that hides the attribution on interaction.
-            // this is allowed under OpenStreetMap Licencing and Attribution
-            GestureDetector(
-              onPanStart: (details) {
-                setState(() {
-                  _showAttribution = false;
-                });
-              },
-              onTap: () {
-                setState(() {
-                  _showAttribution = false;
-                  _isRouting = false;
-                });
-              },
-              child: TileLayer(
-                urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                userAgentPackageName: "mobile_devices_project",
-                tileProvider: _tileProvider,
+    return Scaffold(
+      appBar: AppBar(title: Text("Campus Map")),
+      body: Stack(
+        children: [
+          // The FlutterMap widget that constructs the map
+          FlutterMap(
+            // mapController defines how the map can be interacted with
+            mapController: _mapController,
+            // options sets the maps rules
+            options: _mapOptions,
+            // children contains all the layers that make up the map
+            children: [
+              // First layer is the tile layer, this layer makes a call
+              // to a tile provider and displays it. This layer is wrapped
+              // in a gesture detector that hides the attribution on interaction.
+              // this is allowed under OpenStreetMap Licencing and Attribution
+              GestureDetector(
+                onPanStart: (details) {
+                  setState(() {
+                    _showAttribution = false;
+                  });
+                },
+                onTap: () {
+                  setState(() {
+                    _showAttribution = false;
+                    _isRouting = false;
+                  });
+                },
+                child: TileLayer(
+                  urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                  userAgentPackageName: "mobile_devices_project",
+                  tileProvider: _tileProvider,
+                ),
               ),
-            ),
-            // The second layer is polygon layer that draws polygons on the map
-            // these polygons are constructed from a list of coordinates.
-            // this layer is used to highlight the buildings of the OTU Campus.
-            // A gesture detector is used with flutter_map's hit detector
-            // to select the building that the user has tapped and set routing
-            // as true.
-            GestureDetector(
-              child: PolygonLayer(
-                hitNotifier: _polygonHtNotifier,
-                polygons: [
-                  for (var building in _buildings)
-                    Polygon<Building>(
-                      hitValue: building,
-                      points: building.polygon,
-                      // Conditionally change the color/opacity
-                      // if it's the selected building
-                      color:
-                          (_selectedBuilding?.name == building.name &&
-                              _isRouting)
-                          ? _polygonColorAnimation.value ??
-                                Color(0xFF0077CA).withValues(alpha: 0.20)
-                          : Color(0xFF0077CA).withValues(alpha: 0.20),
-                      borderColor: Color(0xFF003C71),
-                      // Use the animated border width
-                      borderStrokeWidth:
-                          (_selectedBuilding?.name == building.name &&
-                              _isRouting)
-                          ? _borderWidthAnimation.value
-                          : 1.0,
+              // The second layer is polygon layer that draws polygons on the map
+              // these polygons are constructed from a list of coordinates.
+              // this layer is used to highlight the buildings of the OTU Campus.
+              // A gesture detector is used with flutter_map's hit detector
+              // to select the building that the user has tapped and set routing
+              // as true.
+              GestureDetector(
+                child: PolygonLayer(
+                  hitNotifier: _polygonHtNotifier,
+                  polygons: [
+                    for (var building in _buildings)
+                      Polygon<Building>(
+                        hitValue: building,
+                        points: building.polygon,
+                        // Conditionally change the color/opacity
+                        // if it's the selected building
+                        color:
+                            (_selectedBuilding?.name == building.name &&
+                                _isRouting)
+                            ? _polygonColorAnimation.value ??
+                                  Color(0xFF0077CA).withValues(alpha: 0.20)
+                            : Color(0xFF0077CA).withValues(alpha: 0.20),
+                        borderColor: Color(0xFF003C71),
+                        // Use the animated border width
+                        borderStrokeWidth:
+                            (_selectedBuilding?.name == building.name &&
+                                _isRouting)
+                            ? _borderWidthAnimation.value
+                            : 1.0,
+                      ),
+                  ],
+                ),
+                onTap: () {
+                  Building? tappedBuilding =
+                      _polygonHtNotifier.value?.hitValues.isNotEmpty == true
+                      ? _polygonHtNotifier.value!.hitValues[0]
+                      : null;
+
+                  if (tappedBuilding != null) {
+                    if (tappedBuilding.name == _selectedBuilding?.name) {
+                      // Tapping the same building: toggle routing and reverse animation
+                      _isRouting = !_isRouting;
+                      if (_isRouting) {
+                        _selectionAnimationController.forward();
+                      } else {
+                        _selectionAnimationController.reverse();
+                      }
+                    } else {
+                      // Tapping a new building
+                      setState(() {
+                        _selectedBuilding = tappedBuilding;
+                        _isRouting = true;
+                        _mapController.move(_selectedBuilding!.centre, 16.5);
+
+                        if (_currentPosition != null) {
+                          _routeAnimationController.reset(); // Reset the line
+
+                          _routeFuture =
+                              fetchRoute(
+                                _currentPosition!,
+                                _selectedBuilding!.centre,
+                              )..then((_) {
+                                // Play the animation once the future completes
+                                if (mounted && _isRouting) {
+                                  _routeAnimationController.forward();
+                                }
+                              });
+                        }
+                      });
+
+                      _selectionAnimationController.forward(from: 0.0);
+                    }
+                  }
+                },
+              ),
+              // the third layer is the MarkerLayer that is used to mark locations
+              // on the map with a widget. This is used to show the user's current
+              // location.
+              MarkerLayer(
+                markers: [
+                  if (_currentPosition != null)
+                    Marker(
+                      rotate: true,
+                      child: Icon(Icons.location_pin, color: Colors.redAccent),
+                      point: _currentPosition!,
                     ),
                 ],
               ),
-              onTap: () {
-                Building? tappedBuilding =
-                    _polygonHtNotifier.value?.hitValues.isNotEmpty == true
-                    ? _polygonHtNotifier.value!.hitValues[0]
-                    : null;
+              if (_isRouting && _routeFuture != null)
+                FutureBuilder<List<PointLatLng>>(
+                  future: _routeFuture, // Use the stored future!
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      // Optional: Show a loading indicator while the route fetches
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasData) {
+                      return AnimatedBuilder(
+                        animation: _routeAnimation,
+                        builder: (context, child) {
+                          // Calculate how many points to show based on the animation (0.0 to 1.0)
+                          int pointCount =
+                              (snapshot.data!.length * _routeAnimation.value)
+                                  .ceil();
 
-                if (tappedBuilding != null) {
-                  if (tappedBuilding.name == _selectedBuilding?.name) {
-                    // Tapping the same building: toggle routing and reverse animation
-                    _isRouting = !_isRouting;
-                    if (_isRouting) {
-                      _selectionAnimationController.forward();
-                    } else {
-                      _selectionAnimationController.reverse();
+                          // Grab only the visible points
+                          List<LatLng> animatedPoints = snapshot.data!
+                              .take(pointCount)
+                              .map((p) => LatLng(p.latitude, p.longitude))
+                              .toList();
+
+                          return PolylineLayer(
+                            polylines: [
+                              // A Polyline needs at least 2 points to be drawn on the canvas
+                              if (animatedPoints.length > 1)
+                                Polyline(
+                                  points: animatedPoints,
+                                  color: Colors.deepOrange,
+                                  strokeWidth:
+                                      4, // Slightly thicker looks better animated
+                                ),
+                            ],
+                          );
+                        },
+                      );
+                      //   PolylineLayer(
+                      //   polylines: [
+                      //     Polyline(
+                      //       points: [
+                      //         for (var point in snapshot.data!)
+                      //           LatLng(point.latitude, point.longitude),
+                      //       ],
+                      //       color: Colors.deepOrange,
+                      //       strokeWidth: 3,
+                      //     ),
+                      //   ],
+                      // );
+                    } else if (snapshot.hasError) {
+                      // Handle any API errors gracefully
+                      return Center(child: Text('Error loading route'));
                     }
-                  } else {
-                    // Tapping a new building
-                    setState(() {
-                      _selectedBuilding = tappedBuilding;
-                      _isRouting = true;
-                      _mapController.move(_selectedBuilding!.centre, 16.5);
-
-                      if (_currentPosition != null) {
-                        _routeAnimationController.reset(); // Reset the line
-
-                        _routeFuture =
-                            fetchRoute(
-                              _currentPosition!,
-                              _selectedBuilding!.centre,
-                            )..then((_) {
-                              // Play the animation once the future completes
-                              if (mounted && _isRouting) {
-                                _routeAnimationController.forward();
-                              }
-                            });
-                      }
-                    });
-
-                    _selectionAnimationController.forward(from: 0.0);
-                  }
-                }
-              },
-            ),
-            // the third layer is the MarkerLayer that is used to mark locations
-            // on the map with a widget. This is used to show the user's current
-            // location.
-            MarkerLayer(
-              markers: [
-                if (_currentPosition != null)
-                  Marker(
-                    rotate: true,
-                    child: Icon(Icons.location_pin, color: Colors.redAccent),
-                    point: _currentPosition!,
-                  ),
-              ],
-            ),
-            if (_isRouting && _routeFuture != null)
-              FutureBuilder<List<PointLatLng>>(
-                future: _routeFuture, // Use the stored future!
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    // Optional: Show a loading indicator while the route fetches
-                    return const Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasData) {
-                    return AnimatedBuilder(
-                      animation: _routeAnimation,
-                      builder: (context, child) {
-                        // Calculate how many points to show based on the animation (0.0 to 1.0)
-                        int pointCount =
-                            (snapshot.data!.length * _routeAnimation.value)
-                                .ceil();
-
-                        // Grab only the visible points
-                        List<LatLng> animatedPoints = snapshot.data!
-                            .take(pointCount)
-                            .map((p) => LatLng(p.latitude, p.longitude))
-                            .toList();
-
-                        return PolylineLayer(
-                          polylines: [
-                            // A Polyline needs at least 2 points to be drawn on the canvas
-                            if (animatedPoints.length > 1)
-                              Polyline(
-                                points: animatedPoints,
-                                color: Colors.deepOrange,
-                                strokeWidth:
-                                    4, // Slightly thicker looks better animated
-                              ),
-                          ],
-                        );
-                      },
-                    );
-                    //   PolylineLayer(
-                    //   polylines: [
-                    //     Polyline(
-                    //       points: [
-                    //         for (var point in snapshot.data!)
-                    //           LatLng(point.latitude, point.longitude),
-                    //       ],
-                    //       color: Colors.deepOrange,
-                    //       strokeWidth: 3,
-                    //     ),
-                    //   ],
-                    // );
-                  } else if (snapshot.hasError) {
-                    // Handle any API errors gracefully
-                    return Center(child: Text('Error loading route'));
-                  }
-                  return Container();
-                },
-              ),
-            // the Attribution Layer used to credit the map provider
-            if (_showAttribution)
-              SimpleAttributionWidget(
-                source: Text(
-                  "OpenStreetMap Contributors\n"
-                  " OpenStreetRoutingMachine",
+                    return Container();
+                  },
                 ),
-              ),
-          ],
-        ),
-        // end of FlutterMap widget
-        // box that displays name of tapped building
-        if (_isRouting)
-          Align(
-            alignment: AlignmentGeometry.topCenter,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: Padding(
-                padding: EdgeInsetsGeometry.all(10),
-                child: Container(
-                  height: 50,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Color(0xFF003C71),
-                    borderRadius: BorderRadius.circular(5),
-                    boxShadow: [BoxShadow(blurRadius: 3)],
+              // the Attribution Layer used to credit the map provider
+              if (_showAttribution)
+                SimpleAttributionWidget(
+                  source: Text(
+                    "OpenStreetMap Contributors\n"
+                    " OpenStreetRoutingMachine",
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 16.0, right: 8.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _selectedBuilding!.name,
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              fontStyle: FontStyle.italic,
-                              color: Colors.white,
+                ),
+            ],
+          ),
+          // end of FlutterMap widget
+          // box that displays name of tapped building
+          if (_isRouting)
+            Align(
+              alignment: AlignmentGeometry.topCenter,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Padding(
+                  padding: EdgeInsetsGeometry.all(10),
+                  child: Container(
+                    height: 50,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Color(0xFF003C71),
+                      borderRadius: BorderRadius.circular(5),
+                      boxShadow: [BoxShadow(blurRadius: 3)],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 16.0, right: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _selectedBuilding!.name,
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                fontStyle: FontStyle.italic,
+                                color: Colors.white,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            _selectionAnimationController.reverse().then((_) {
-                              // 2. Wait until the animation finishes, THEN clear the state
-                              if (mounted) {
-                                setState(() {
-                                  _isRouting = false;
-                                  _selectedBuilding = null;
-                                  _routeFuture =
-                                      null; // Clear the drawn route line
-                                });
-                              }
-                            });
-                          },
-                          icon: Icon(Icons.close, color: Colors.white),
-                        ),
-                      ],
+                          IconButton(
+                            onPressed: () {
+                              _selectionAnimationController.reverse().then((_) {
+                                // 2. Wait until the animation finishes, THEN clear the state
+                                if (mounted) {
+                                  setState(() {
+                                    _isRouting = false;
+                                    _selectedBuilding = null;
+                                    _routeFuture =
+                                        null; // Clear the drawn route line
+                                  });
+                                }
+                              });
+                            },
+                            icon: Icon(Icons.close, color: Colors.white),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
