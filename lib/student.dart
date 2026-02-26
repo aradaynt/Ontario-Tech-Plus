@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class Student {
   String name = '';
   int studentid = 0;
+  String email = '';
   String program = '';
   String faculty = '';
   int year = 0;
@@ -10,6 +11,7 @@ class Student {
   Student({
     required this.name,
     required this.studentid,
+    required this.email,
     required this.program,
     required this.faculty,
     required this.year,

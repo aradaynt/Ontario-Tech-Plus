@@ -204,8 +204,7 @@ class _EmailPageState extends State<EmailPage> {
                         'subject': subject,
                         'message':
                             "${courseLine}Appointment for: \n${widget.week}\n${widget.date.toString()}\nReason for this appointment is: \n$body",
-                        'user_email':
-                            "${widget.student.name.toLowerCase().replaceAll(' ', '.')}@ontariotechu.net",
+                        'user_email': widget.student.email,
                         'name': widget.student.name,
                       },
                       emailjs.Options(

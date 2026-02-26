@@ -24,6 +24,7 @@ class _CourseAppointmentPageState extends State<CourseAppointmentPage> {
   late Student student1 = Student(
     name: "Arad Ayntabli",
     studentid: 100845722,
+    email: "arad.ayntabli@ontariotechu.net",
     program: "Computer Science",
     faculty: "science",
     year: 4,
