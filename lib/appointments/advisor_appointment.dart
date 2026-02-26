@@ -117,10 +117,14 @@ class _AdvisorAppointmentPageState extends State<AdvisorAppointmentPage> {
           children: [
             const SizedBox(height: 20),
 
-            // --- HORIZONTAL LIST: ADVISORS ---
-            const Text(
-              "Select an Advisor:",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: const Text(
+                  "Select a Advisor:",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
             ),
 
             if (advisors.isEmpty)
