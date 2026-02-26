@@ -229,10 +229,10 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   late AnimationController _selectionAnimationController;
   late Animation<Color?> _polygonColorAnimation;
   late Animation<double> _borderWidthAnimation;
+  late Animation<Offset> _slideAnimation;
 
   // boolean variables for program control
   bool _isRouting = false;
-  bool _isNavigating = false;
   bool _showAttribution = true;
 
   // initState
@@ -267,6 +267,18 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       ),
     );
 
+    // define the slide transition
+    _slideAnimation =
+        Tween<Offset>(
+          begin: const Offset(0.0, -2.0), // Start above the visible area
+          end: Offset.zero, // End at the default position
+        ).animate(
+          CurvedAnimation(
+            parent: _selectionAnimationController,
+            curve: Curves.easeOutBack,
+          ),
+        );
+
     // trigger map rebuilds on every animation frame
     _selectionAnimationController.addListener(() {
       setState(() {});
@@ -294,6 +306,11 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
             // in a gesture detector that hides the attribution on interaction.
             // this is allowed under OpenStreetMap Licencing and Attribution
             GestureDetector(
+              onPanStart: (details) {
+                setState(() {
+                  _showAttribution = false;
+                });
+              },
               onTap: () {
                 setState(() {
                   _showAttribution = false;
@@ -325,17 +342,15 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                       color:
                           (_selectedBuilding?.name == building.name &&
                               _isRouting)
-                          ? Color(0xFF0077CA).withValues(
-                              alpha: 0.60,
-                            ) // Darker/more opaque when selected
+                          ? _polygonColorAnimation.value ??
+                                Color(0xFF0077CA).withValues(alpha: 0.20)
                           : Color(0xFF0077CA).withValues(alpha: 0.20),
-                      // Default transparent look
                       borderColor: Color(0xFF003C71),
-                      // Thicker border when selected
+                      // Use the animated border width
                       borderStrokeWidth:
                           (_selectedBuilding?.name == building.name &&
                               _isRouting)
-                          ? 3.0
+                          ? _borderWidthAnimation.value
                           : 1.0,
                     ),
                 ],
@@ -391,7 +406,10 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
             // the Attribution Layer used to credit the map provider
             if (_showAttribution)
               SimpleAttributionWidget(
-                source: Text("OpenStreetMap Contributors"),
+                source: Text(
+                  "OpenStreetMap Contributors\n"
+                  " OpenStreetRoutingMachine",
+                ),
               ),
             if (_isRouting && _routeFuture != null)
               FutureBuilder<List<PointLatLng>>(
@@ -423,28 +441,56 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
           ],
         ),
         // end of FlutterMap widget
-        //
+        // box that displays name of tapped building
         if (_isRouting)
           Align(
             alignment: AlignmentGeometry.topCenter,
-            child: Padding(
-              padding: EdgeInsetsGeometry.all(10),
-              child: Container(
-                height: 50,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Color(0xFF003C71),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: Align(
-                  alignment: AlignmentGeometry.center,
-                  child: Text(
-                    _selectedBuilding!.name,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      fontStyle: FontStyle.italic,
-                      color: Colors.white,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: Padding(
+                padding: EdgeInsetsGeometry.all(10),
+                child: Container(
+                  height: 50,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Color(0xFF003C71),
+                    borderRadius: BorderRadius.circular(5),
+                    boxShadow: [BoxShadow(blurRadius: 3)],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16.0, right: 8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _selectedBuilding!.name,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.white,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            _selectionAnimationController.reverse().then((_) {
+                              // 2. Wait until the animation finishes, THEN clear the state
+                              if (mounted) {
+                                setState(() {
+                                  _isRouting = false;
+                                  _selectedBuilding = null;
+                                  _routeFuture =
+                                      null; // Clear the drawn route line
+                                });
+                              }
+                            });
+                          },
+                          icon: Icon(Icons.close, color: Colors.white),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -544,7 +590,6 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
           jsonDecode(response.body) as Map<String, dynamic>;
 
       String geometry = temp["routes"][0]["geometry"];
-      print("geometry = $geometry");
       List<PointLatLng> points = PolylinePoints.decodePolyline(geometry);
       // return the list of points that make up the polyline
       return points;
