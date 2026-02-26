@@ -1,6 +1,7 @@
 // OntarioTechPlus - home_page.dart
 
-// This is a temporary home page that just displays the users name, student number and a signout button.
+// This is the main dashboard page that displays the users name, student number
+// and provides navigation to main sections of the app.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,7 +18,7 @@ class HomePage extends ConsumerWidget {
 
     // Handle loading, error and data states
     return profileAsync.when(
-      // Show a spinnder when loading profile data
+      // Show a spinner when loading profile data
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
 
@@ -41,7 +42,7 @@ class HomePage extends ConsumerWidget {
         // ================== Build the page ======================
         return Scaffold(
           appBar: AppBar(
-            title: const Text("Home"),
+            title: const Text("Dashboard"),
             actions: [
               // Go to profile
               IconButton(
@@ -53,11 +54,13 @@ class HomePage extends ConsumerWidget {
             ],
           ),
 
-          // Main body centered
-          body: Center(
+          // Main body with padding
+          body: Padding(
+            padding: const EdgeInsets.all(20),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ================== Welcome Section ======================
                 Text(
                   "Welcome ${profile.firstname} ${profile.lastname} 👋",
                   style: const TextStyle(
@@ -65,16 +68,114 @@ class HomePage extends ConsumerWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   "Student Number: ${profile.studentNumber}",
-                  style: const TextStyle(fontSize: 18),
+                  style: const TextStyle(fontSize: 16),
+                ),
+
+                const SizedBox(height: 30),
+
+                // ================== Navigation Cards ======================
+                Expanded(
+                  child: GridView.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    children: [
+                      _MenuCard(
+                        icon: Icons.book,
+                        title: "Courses",
+                        onTap: () {
+                          Navigator.pushNamed(context, '/courses');
+                        },
+                      ),
+                      _MenuCard(
+                        icon: Icons.grade,
+                        title: "Grades",
+                        onTap: () {
+                          Navigator.pushNamed(context, '/grades');
+                        },
+                      ),
+                      _MenuCard(
+                        icon: Icons.schedule,
+                        title: "Schedule",
+                        onTap: () {
+                          Navigator.pushNamed(context, '/schedule');
+                        },
+                      ),
+                      _MenuCard(
+                        icon: Icons.settings,
+                        title: "Settings",
+                        onTap: () {
+                          Navigator.pushNamed(context, '/settings');
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // ================== Sign Out Button ======================
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () {
+                      // TODO: implement sign out logic
+                      Navigator.pushReplacementNamed(context, '/login');
+                    },
+                    child: const Text("Sign Out"),
+                  ),
                 ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+}
+
+// ================== Reusable Menu Card Widget ======================
+
+class _MenuCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  const _MenuCard({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Theme.of(context).colorScheme.primaryContainer,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 40),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
