@@ -74,15 +74,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       // Body depends on async profile state
       body: profileAsync.when(
         loading: () {
+          // If data loaded, keep it instead of showing loading
           if (_cachedProfile != null) {
             return _buildProfileView(context, auth, _cachedProfile!);
           }
           return const Center(child: CircularProgressIndicator());
         },
         error: (_, _) {
+          // If the profile data is already loaded, keep showing rather than error
           if (_cachedProfile != null) {
             return _buildProfileView(context, auth, _cachedProfile!);
           }
+          // If there is an error loading data at all, print error
           return const Center(
             child: Text(
               "Error loading profile",
@@ -91,20 +94,25 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           );
         },
         data: (profile) {
+          // If real profile found, create cache. (Used to hold data on screen during logout)
           if (profile != null) {
             _cachedProfile = profile;
 
+            // If the profile refreshed while not editing, keep controllers in sync
             if (!_isEditing) {
               _fillControllers(profile);
             }
 
+            // Build the profile with latest profile data
             return _buildProfileView(context, auth, profile);
           }
 
+          // During signout, use the cached profile
           if (_isSigningOut && _cachedProfile != null) {
             return _buildProfileView(context, auth, _cachedProfile!);
           }
 
+          // This is only shown if not during a signout and there is actually not profile
           return const Center(child: Text("No profile found"));
         },
       ),
@@ -116,9 +124,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     if (_isSigningOut || _isSaving) return;
 
     if (_isEditing) {
+      // Cancel edit
       setState(() => _isEditing = false);
       _fillControllers(profile); // reset fields
     } else {
+      // Start edit
       _fillControllers(profile);
       setState(() => _isEditing = true);
     }
@@ -144,27 +154,37 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     dynamic auth,
     Profile profile,
   ) {
+    // Scollable list of sections
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Top profile card
         Card(
+          // Card elevation/shadow
           elevation: 2,
+          // Stack to put pencil top right
           child: Stack(
             children: [
+              // Inside padding for card
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 20,
                 ),
+                // Center profile icon, firstName name and email
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Profile icon top center
                       CircleAvatar(
                         radius: 34,
                         child: const Icon(Icons.person, size: 34),
                       ),
+
                       const SizedBox(height: 12),
+
+                      // Student firstName name
                       Text(
                         profile.firstname,
                         textAlign: TextAlign.center,
@@ -173,7 +193,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
+
                       const SizedBox(height: 6),
+
+                      // Student email
                       Text(
                         profile.email,
                         textAlign: TextAlign.center,
@@ -186,6 +209,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                 ),
               ),
+
+              // Pencil icon in top right of card
               Positioned(
                 top: 6,
                 right: 6,
@@ -203,6 +228,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
         const SizedBox(height: 12),
 
+        // Change email button below card
         OutlinedButton.icon(
           onPressed: () {
             _snack("Change email coming soon!");
@@ -213,6 +239,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
         const SizedBox(height: 18),
 
+        // Profile information
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(
@@ -223,13 +250,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           ),
         ),
 
+        // Information cards
         Card(
           elevation: 1,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Column(
               children: [
-                if (!_isEditing)
+                // Full name
+                if (!_isEditing) // Not editting
                   ListTile(
                     leading: const Icon(Icons.badge_outlined),
                     title: const Text("Full Name"),
@@ -240,6 +269,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                   )
                 else ...[
+                  // Editting
                   _editTile(
                     icon: Icons.person,
                     title: "First Name",
@@ -254,9 +284,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                 ],
 
+                //Put a devider
                 const Divider(height: 12, indent: 16, endIndent: 16),
 
-                if (!_isEditing)
+                // Student Number
+                if (!_isEditing) //Not edittign
                   ListTile(
                     leading: const Icon(Icons.numbers),
                     title: const Text("Student Number"),
@@ -266,7 +298,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       vertical: 10,
                     ),
                   )
-                else
+                else // Editting
                   _editTile(
                     icon: Icons.numbers,
                     title: "Student Number",
@@ -275,15 +307,21 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     keyboardType: TextInputType.number,
                   ),
 
+                //Put a devider
                 const Divider(height: 12, indent: 16, endIndent: 16),
 
-                if (!_isEditing)
+                // Program
+                if (!_isEditing) // Not editting
                   ListTile(
                     leading: const Icon(Icons.school),
                     title: const Text("Program"),
                     subtitle: Text(profile.program),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                   )
-                else
+                else // Editting
                   _editTile(
                     icon: Icons.school,
                     title: "Program",
@@ -291,22 +329,28 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     enabled: !_isSaving,
                   ),
 
+                //Put a devider
                 const Divider(height: 12, indent: 16, endIndent: 16),
 
-                if (!_isEditing)
+                // Faculty
+                if (!_isEditing) // Not editting
                   ListTile(
                     leading: const Icon(Icons.account_balance),
                     title: const Text("Faculty"),
                     subtitle: Text(profile.faculty),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                   )
-                else
+                else // Editting
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
                     ),
                     child: DropdownButtonFormField<String>(
-                      value: _selectedFaculty,
+                      initialValue: _selectedFaculty,
                       decoration: const InputDecoration(labelText: "Faculty"),
                       items: _faculties
                           .map(
@@ -318,22 +362,28 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                   ),
 
+                //Put a devider
                 const Divider(height: 12, indent: 16, endIndent: 16),
 
-                if (!_isEditing)
+                // Year
+                if (!_isEditing) // Not editting
                   ListTile(
                     leading: const Icon(Icons.calendar_today),
                     title: const Text("Year"),
                     subtitle: Text(profile.year),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                   )
-                else
+                else // Editting
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
                     ),
                     child: DropdownButtonFormField<String>(
-                      value: _selectedYear,
+                      initialValue: _selectedYear,
                       decoration: const InputDecoration(labelText: "Year"),
                       items: _years
                           .map(
@@ -353,21 +403,27 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
         const SizedBox(height: 16),
 
+        // Save and cancel button appearing under information
         if (_isEditing) ...[
+          // Check if editting
           Row(
             children: [
+              // Cancel button
               Expanded(
                 child: OutlinedButton(
                   onPressed: (_isSaving || _isSigningOut)
                       ? null
                       : () {
                           setState(() => _isEditing = false);
-                          _fillControllers(profile);
+                          _fillControllers(profile); // reset edits
                         },
                   child: const Text("Cancel"),
                 ),
               ),
+
               const SizedBox(width: 12),
+
+              // Save button
               Expanded(
                 child: ElevatedButton(
                   onPressed: (_isSaving || _isSigningOut)
@@ -386,23 +442,34 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ),
             ],
           ),
+
+          // Space for save button
           const SizedBox(height: 16),
         ],
 
+        // Sign Out Button
         ElevatedButton(
+          // Disable if signout or saving
           onPressed: (_isSigningOut || _isSaving)
               ? null
               : () async {
-                  setState(() => _isSigningOut = true);
-                  Navigator.of(context).pop();
+                  // On signout
+                  setState(() => _isSigningOut = true); // Set signout true
+
+                  Navigator.of(context).pop(); // Pop back
+
+                  // Signout, allowing main to route back to login
                   await auth.signOut();
                 },
+          // Signout button styling
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
-          child: _isSigningOut
+          child:
+              _isSigningOut // If is signing out
               ? const SizedBox(
+                  // Put a circle loading indication in place of the text
                   height: 20,
                   width: 20,
                   child: CircularProgressIndicator(
@@ -410,12 +477,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 )
+              // Otherwise display the signout out btn text
               : const Text("Sign Out", style: TextStyle(color: Colors.white)),
         ),
       ],
     );
   }
 
+  // Widget for displaying the the information in edit mode
   Widget _editTile({
     required IconData icon,
     required String title,
@@ -436,12 +505,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
+  // Function to handle saving the edits made
   Future<void> _saveEdits(Profile currentProfile) async {
     final firstName = _firstNameController.text.trim();
     final lastName = _lastNameController.text.trim();
     final studentNumber = _studentNumberController.text.trim();
     final program = _programController.text.trim();
 
+    // Make sure the fields are not empty
     if (firstName.isEmpty ||
         lastName.isEmpty ||
         studentNumber.isEmpty ||
@@ -452,8 +523,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       return;
     }
 
+    // Set is saving to true
     setState(() => _isSaving = true);
 
+    // Try to update the profile data using provider
     try {
       await ref
           .read(profileActionsProvider)
@@ -469,15 +542,21 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
           );
 
+      // Exit editing on success
       setState(() => _isEditing = false);
+
+      // Display snackbar for success
       _snack("Profile updated.");
     } catch (e) {
+      // display a user friendly message on update failure
       _snack("Profile could not be updated.");
     } finally {
+      // set is saving to false no matter what success
       if (mounted) setState(() => _isSaving = false);
     }
   }
 
+  // Helper function for the snack bar
   void _snack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(
