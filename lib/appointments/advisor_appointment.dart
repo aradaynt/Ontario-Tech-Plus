@@ -142,7 +142,7 @@ class _AdvisorAppointmentPageState extends State<AdvisorAppointmentPage> {
                     return GestureDetector(
                       onTap: () => setState(() {
                         selectedIndex = isSelected ? -1 : index;
-                        selectedDate = -1; // Reset time when advisor changes
+                        selectedDate = -1;
                       }),
                       child: Container(
                         width: 160,
@@ -183,7 +183,6 @@ class _AdvisorAppointmentPageState extends State<AdvisorAppointmentPage> {
                 ),
               ),
 
-            // --- VERTICAL LIST: OFFICE HOURS ---
             if (selectedIndex != -1) ...[
               const Divider(),
               const SizedBox(height: 10),
@@ -200,8 +199,7 @@ class _AdvisorAppointmentPageState extends State<AdvisorAppointmentPage> {
 
               ListView.builder(
                 shrinkWrap: true,
-                physics:
-                    const NeverScrollableScrollPhysics(), // Prevents scrolling conflicts
+                physics: const NeverScrollableScrollPhysics(),
                 itemCount: advisors[selectedIndex].officehours.length,
                 itemBuilder: (context, index) {
                   final time = advisors[selectedIndex].officehours[index];
@@ -218,25 +216,18 @@ class _AdvisorAppointmentPageState extends State<AdvisorAppointmentPage> {
                       color: isSelected
                           ? colorScheme.primaryContainer
                           : Colors.white,
-                      child: ListTile(
-                        title: Text(
-                          "${time.day}s",
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          time.toString(),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        subtitle: Text(time.toString()),
-                        trailing: isSelected
-                            ? const Icon(
-                                Icons.check_circle,
-                                color: Colors.green,
-                              )
-                            : null,
                       ),
                     ),
                   );
                 },
               ),
 
-              // --- NEXT BUTTON ---
               if (selectedDate != -1)
                 Padding(
                   padding: const EdgeInsets.all(20.0),
@@ -246,8 +237,7 @@ class _AdvisorAppointmentPageState extends State<AdvisorAppointmentPage> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => WeekSelection(
-                            advisor:
-                                advisors[selectedIndex], // Passing the selected Advisor
+                            advisor: advisors[selectedIndex],
                             student: student1,
                             date: advisors[selectedIndex]
                                 .officehours[selectedDate],
