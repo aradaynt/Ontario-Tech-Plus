@@ -16,7 +16,9 @@ final profileProvider = FutureProvider<Profile?>((ref) async {
 
   final data = await supabase
       .from('profiles')
-      .select('*') // Pull everything from profile table
+      .select(
+        'firstname, lastname, email, student_number, program, faculty, year',
+      )
       .eq('id', user.id)
       .maybeSingle();
 

@@ -305,6 +305,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     controller: _studentNumberController,
                     enabled: !_isSaving,
                     keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.done,
+                    helperText: "Must be exactly 9 digits.",
                   ),
 
                 //Put a devider
@@ -490,7 +492,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     required String title,
     required TextEditingController controller,
     required bool enabled,
+    TextInputAction? textInputAction,
     TextInputType? keyboardType,
+    String? helperText,
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -499,8 +503,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       subtitle: TextField(
         controller: controller,
         enabled: enabled,
+        textInputAction: textInputAction,
         keyboardType: keyboardType,
-        decoration: const InputDecoration(isDense: true),
+        decoration: InputDecoration(isDense: true, helperText: helperText),
       ),
     );
   }
@@ -550,8 +555,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
           );
 
-      // Exit editing on success
-      setState(() => _isEditing = false);
+      // Update cache immediately so UI feels instant
+      setState(() {
+        _cachedProfile = Profile(
+          firstname: firstName,
+          lastname: lastName,
+          email: currentProfile.email,
+          studentNumber: studentNumber,
+          program: program,
+          faculty: _selectedFaculty!,
+          year: _selectedYear!,
+        );
+        _isEditing = false; // Set iseditting to false
+      });
 
       // Display snackbar for success
       _snack("Profile updated.");
