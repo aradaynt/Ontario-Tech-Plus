@@ -54,7 +54,8 @@ class Dates {
   String day;
   TimeOfDay start;
   TimeOfDay end;
-  Dates(this.day, this.start, this.end);
+  String? courseCode;
+  Dates(this.day, this.start, this.end, [this.courseCode]);
   @override
   String toString() {
     final startperiod = start.hour >= 12 ? 'PM' : 'AM';
@@ -70,6 +71,24 @@ class Dates {
     final endminute = end.minute.toString().padLeft(2, '0');
     return '$day: \n$starthour:$startminute $startperiod - $endhour:$endminute $endperiod';
   }
+}
+
+class Advisor {
+  int id;
+  String name;
+  String email;
+  String faculty;
+  String office;
+  List<Dates> officehours;
+
+  Advisor({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.faculty,
+    required this.office,
+    required this.officehours,
+  });
 }
 
 class Instructor {

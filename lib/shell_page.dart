@@ -11,10 +11,11 @@ import 'package:ontario_tech_plus/core/global_providers/nav_tab_provider.dart';
 import 'package:ontario_tech_plus/core/global_widgets/app_bottom_navbar.dart';
 
 import 'package:ontario_tech_plus/home/home_page.dart';
-import 'package:ontario_tech_plus/appointments/appointment.dart';
 import 'package:ontario_tech_plus/booking/booking_page.dart';
 import 'package:ontario_tech_plus/schedule/schedule_page.dart';
 import 'package:ontario_tech_plus/navigation/navigation_page.dart';
+
+import 'package:ontario_tech_plus/appointments/appointment_landing.dart';
 
 class ShellPage extends ConsumerWidget {
   const ShellPage({super.key});
@@ -25,7 +26,7 @@ class ShellPage extends ConsumerWidget {
 
     final pages = const [
       HomePage(),
-      AppointmentPage(),
+      AppointmentTypePage(),
       BookingPage(),
       SchedulePage(),
       NavigationPage(),

@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../student.dart';
-import 'timeSelector.dart';
+import 'time_selector.dart';
 
 class WeekSelection extends StatefulWidget {
-  final Instructor instructor;
+  final Instructor? instructor;
+  final Advisor? advisor;
   final Student student;
   final Dates date;
   const WeekSelection({
     super.key,
-    required this.instructor,
+    this.instructor,
+    this.advisor,
     required this.student,
     required this.date,
   });
@@ -173,6 +175,7 @@ class _WeekSelectionState extends State<WeekSelection> {
                           MaterialPageRoute(
                             builder: (context) => SpecificTime(
                               instructor: widget.instructor,
+                              advisor: widget.advisor,
                               student: widget.student,
                               date: widget.date,
                               weekLabel:

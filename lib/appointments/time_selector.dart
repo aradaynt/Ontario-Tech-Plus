@@ -2,17 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // Added Supabase
 
 import '../student.dart';
-import 'emailPage.dart';
+import 'email_page.dart';
 
 class SpecificTime extends StatefulWidget {
-  final Instructor instructor;
+  final Instructor? instructor;
+  final Advisor? advisor;
   final Student student;
   final Dates date;
   final String? weekLabel; // Month, Day, Year. Like America
 
   const SpecificTime({
     super.key,
-    required this.instructor,
+    this.instructor,
+    this.advisor,
     required this.student,
     required this.date,
     this.weekLabel,
@@ -51,7 +53,9 @@ class _SpecificTimeState extends State<SpecificTime> {
         minute: nextMinutes % 60,
       );
 
-      timeslots.add(Dates(widget.date.day, slotStart, slotEnd));
+      timeslots.add(
+        Dates(widget.date.day, slotStart, slotEnd, widget.date.courseCode),
+      );
       currentMinutes = nextMinutes;
     }
   }
@@ -68,7 +72,7 @@ class _SpecificTimeState extends State<SpecificTime> {
       final response = await supabase
           .from('booked')
           .select('start')
-          .eq('prof_id', widget.instructor.id)
+          .eq('prof_id', widget.instructor!.id)
           .eq('date', widget.weekLabel as Object);
 
       final Set<String> fetchedBookedTimes = {};
@@ -213,6 +217,7 @@ class _SpecificTimeState extends State<SpecificTime> {
                           MaterialPageRoute(
                             builder: (context) => EmailPage(
                               instructor: widget.instructor,
+                              advisor: widget.advisor,
                               student: widget.student,
                               date: timeslots[selectedTime],
                               week: widget.weekLabel,
