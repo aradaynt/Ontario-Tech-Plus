@@ -4,6 +4,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ontario_tech_plus/home/settings_page.dart';
+import 'package:ontario_tech_plus/recs(ml)/reccomendation_pages.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -86,6 +88,12 @@ class MyApp extends ConsumerWidget {
         '/course_management': (_) => const CourseManagementPage(),
         '/add_course': (_) => const AddCoursePage(),
         '/drop_course': (_) => const DropCoursePage(),
+
+        '/recommendations': (_) => const RecommendationPage(),
+
+        '/schedule': (_) => const ViewMySchedulePage(),
+
+        '/settings': (_) => const SettingsPage(),
       },
 
       // ================== Routing ======================

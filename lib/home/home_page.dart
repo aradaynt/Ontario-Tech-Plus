@@ -92,9 +92,9 @@ class HomePage extends ConsumerWidget {
                       ),
                       _MenuCard(
                         icon: Icons.grade,
-                        title: "Grades",
+                        title: "Club Recommendations",
                         onTap: () {
-                          Navigator.pushNamed(context, '/grades');
+                          Navigator.pushNamed(context, '/recommendations');
                         },
                       ),
                       _MenuCard(
