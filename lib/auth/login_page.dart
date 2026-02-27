@@ -76,7 +76,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       }
     } catch (e) {
       setState(() {
-        _error = "An error has occured. Please try again.";
+        _error = "Authentication failed. Please try again.";
+        //_error = e.toString();
       });
     } finally {
       if (mounted) {
