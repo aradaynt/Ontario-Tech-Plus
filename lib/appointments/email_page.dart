@@ -171,6 +171,8 @@ class _EmailPageState extends State<EmailPage> {
                   try {
                     final supabase = Supabase.instance.client;
 
+                    final userId = supabase.auth.currentUser!.id;
+
                     final isAdvisor = widget.advisor != null;
 
                     final targetId = isAdvisor
@@ -179,6 +181,8 @@ class _EmailPageState extends State<EmailPage> {
 
                     final targetEmail = isAdvisor
                         ? widget.advisor!.email
+                        : widget.instructor!.email == 'Unknown Email'
+                        ? '${widget.instructor?.name.split(' ').first}@ontariotechu.net)}'
                         : widget.instructor!.email;
 
                     final targetTable = isAdvisor ? 'advisor_booked' : 'booked';
@@ -186,7 +190,7 @@ class _EmailPageState extends State<EmailPage> {
 
                     await supabase.from(targetTable).insert({
                       targetColumn: targetId,
-                      'student_id': widget.student.studentid,
+                      'student_id': userId,
                       'start': formatTime(widget.date.start),
                       'end': formatTime(widget.date.end),
                       'date': _formatDateForSupabase(widget.week),

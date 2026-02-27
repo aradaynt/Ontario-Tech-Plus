@@ -20,38 +20,56 @@ class _CourseAppointmentPageState extends State<CourseAppointmentPage> {
   int selectedInstructorIndex = -1;
   int selectedDateIndex = -1;
 
-  // Placeholder student
-  late Student student1 = Student(
-    name: "Arad Ayntabli",
-    studentid: 100845722,
-    email: "arad.ayntabli@ontariotechu.net",
-    program: "Computer Science",
-    faculty: "science",
-    year: 4,
-    courses: [],
-  );
+  late Student student1;
 
   @override
   void initState() {
     super.initState();
-    _fetchMyCourses();
+    _initializeData();
   }
 
-  Future<void> _fetchMyCourses() async {
+  Future<void> _initializeData() async {
     try {
       final supabase = Supabase.instance.client;
-      // For now, grabbing all courses. Once Auth is hooked up,
-      // will join this with student_enrolled_courses where student_id = logged-in UUID.
-      final coursesResponse = await supabase.from('courses').select();
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        throw Exception("User is not logged in!");
+      }
+
+      final profileResponse = await supabase
+          .from('profiles')
+          .select()
+          .eq('id', user.id)
+          .single();
+
+      student1 = Student(
+        name: "${profileResponse['firstname']} ${profileResponse['lastname']}",
+        studentid: int.parse(profileResponse['student_number'].toString()),
+        email: profileResponse['email'],
+        program: profileResponse['program'],
+        faculty: profileResponse['faculty'],
+        year: int.parse(profileResponse['year'].toString()),
+        courses: [],
+      );
+
+      final enrolledResponse = await supabase
+          .from('student_enrolled_courses')
+          .select('courses (*)')
+          .eq('user_id', user.id);
+
+      final fetchedCourses = enrolledResponse
+          .map((e) => e['courses'] as Map<String, dynamic>)
+          .toList();
 
       if (mounted) {
         setState(() {
-          myCourses = List<Map<String, dynamic>>.from(coursesResponse);
+          myCourses = fetchedCourses;
           _isLoading = false;
         });
       }
     } catch (e) {
-      print("Error fetching courses: $e");
+      print("Error initializing data: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -71,20 +89,23 @@ class _CourseAppointmentPageState extends State<CourseAppointmentPage> {
       final supabase = Supabase.instance.client;
 
       final response = await supabase
-          .from('course_instructors')
+          .from('section_instructors')
           .select('''
-        role,
-        instructor (id, name, email, type, faculty, office),
-        office_hours (id, day, start, end)
-      ''')
-          .eq('course_id', courseId);
+            role,
+            instructor (id, name, email, type, faculty, office),
+            office_hours (id, day, start, end),
+            course_sections!inner (course_id) 
+          ''')
+          .eq('course_sections.course_id', courseId);
 
-      List<Instructor> fetchedInstructors = [];
+      Map<int, Instructor> instructorMap = {};
 
       for (var row in response) {
         final instructorData = row['instructor'];
-        final officeHoursData = row['office_hours'] as List<dynamic>? ?? [];
+        if (instructorData == null) continue;
+        final instructorId = int.parse(instructorData['id'].toString());
         final role = row['role'] ?? 'Instructor';
+        final officeHoursData = row['office_hours'] as List<dynamic>? ?? [];
 
         List<Dates> parsedHours = [];
         for (var oh in officeHoursData) {
@@ -94,7 +115,7 @@ class _CourseAppointmentPageState extends State<CourseAppointmentPage> {
 
           parsedHours.add(
             Dates(
-              oh['day'],
+              oh['day'] ?? "TBD",
               TimeOfDay(
                 hour: int.parse(startParts[0]),
                 minute: int.parse(startParts[1]),
@@ -108,22 +129,24 @@ class _CourseAppointmentPageState extends State<CourseAppointmentPage> {
           );
         }
 
-        fetchedInstructors.add(
-          Instructor(
-            id: int.parse(instructorData['id'].toString()),
+        if (instructorMap.containsKey(instructorId)) {
+          instructorMap[instructorId]!.officehours.addAll(parsedHours);
+        } else {
+          instructorMap[instructorId] = Instructor(
+            id: instructorId,
             name: instructorData['name'],
-            email: instructorData['email'],
+            email: instructorData['email'] ?? 'Unknown Email',
             type: instructorData['type'] ?? role.toString().toLowerCase(),
-            faculty: instructorData['faculty'] ?? '',
-            office: instructorData['office'] ?? '',
+            faculty: instructorData['faculty'] ?? 'Unknown Faculty',
+            office: instructorData['office'] ?? 'TBD',
             officehours: parsedHours,
-          ),
-        );
+          );
+        }
       }
 
       if (mounted) {
         setState(() {
-          courseInstructors = fetchedInstructors;
+          courseInstructors = instructorMap.values.toList();
           _isLoading = false;
         });
       }
