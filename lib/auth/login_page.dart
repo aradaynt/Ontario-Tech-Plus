@@ -2,7 +2,7 @@
 
 // This is a basic login page which allows Login and Account Creation
 
-// WIP: Still needs a proper UI look and feel
+// UI can still use some work
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -44,6 +44,52 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _loading = false;
   String? _error;
 
+  // Signup step tracking
+  // 0 = email, password, firstname, lastname, student number
+  // 1 = program, faculty, year
+  int _signupStep = 0;
+
+  // ====================== UI Helpers ======================
+
+  static const _fieldFill = Color(0x33FFFFFF);
+  static const _fieldBorder = Color(0x55FFFFFF);
+  static const _fieldBorderFocus = Color(0xCCFFFFFF);
+
+  InputDecoration _inputDecoration(String label, {IconData? icon}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.white),
+      floatingLabelStyle: const TextStyle(color: Colors.white),
+      hintStyle: const TextStyle(color: Color(0xCCFFFFFF)),
+      prefixIcon: icon == null ? null : Icon(icon, color: Colors.white70),
+      filled: true,
+      fillColor: _fieldFill,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _fieldBorder, width: 1),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _fieldBorder, width: 1),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _fieldBorderFocus, width: 1.4),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 1.2),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 1.4),
+      ),
+      errorStyle: const TextStyle(color: Colors.redAccent),
+    );
+  }
+
+  // ====================== Submittion Function (Login/Signup) ======================
   Future<void> _submit() async {
     // Only validate the the currently shown fields
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -57,22 +103,33 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     // Only use certain fields depending on mode (signup/signin)
     try {
+      // Base login
       if (_isLogin) {
         await auth.signIn(
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
+
+        // Handles signups
       } else {
-        await auth.signUp(
-          _emailController.text.trim(),
-          _passwordController.text.trim(),
-          _firstNameController.text.trim(),
-          _lastNameController.text.trim(),
-          _studentNumberController.text.trim(),
-          _programController.text.trim(),
-          _selectedFaculty!,
-          _selectedYear!,
-        );
+        // step 1 simply proceeds to step two with no signup
+        if (_signupStep == 0) {
+          setState(() {
+            _signupStep = 1;
+          });
+        } else {
+          // Step 2 is where hte user actually signs up
+          await auth.signUp(
+            _emailController.text.trim(),
+            _passwordController.text.trim(),
+            _firstNameController.text.trim(),
+            _lastNameController.text.trim(),
+            _studentNumberController.text.trim(),
+            _programController.text.trim(),
+            _selectedFaculty!,
+            _selectedYear!,
+          );
+        }
       }
     } catch (e) {
       setState(() {
@@ -98,6 +155,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     setState(() {
       _isLogin = !_isLogin;
+      _error = null;
+
+      // Reset step when changing modes
+      _signupStep = 0;
+
+      // reset the drop downs when changing modes
+      _selectedFaculty = null;
+      _selectedYear = null;
+    });
+  }
+
+  // Handles clearing the validation when going back
+  void _backSignupStep() {
+    // Clear the forms validation
+    _formKey.currentState?.reset();
+
+    setState(() {
+      _signupStep = 0;
       _error = null;
     });
   }
@@ -153,153 +228,262 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   // ====================== Page Building ======================
   @override
   Widget build(BuildContext context) {
+    // Button text should change depending on login/signup step
+    final buttonText = _isLogin
+        ? "Login"
+        : (_signupStep == 0 ? "Next" : "Sign Up");
+
     return Scaffold(
       appBar: AppBar(
         // Toggle between login or signup
-        title: Text(
-          _isLogin ? "Ontario Tech Plus Login" : "Ontario Tech Plus Signup",
-        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        // title: Text(
+        //   _isLogin ? "Ontario Tech Plus Login" : "Ontario Tech Plus Signup",
+        // ),
       ),
+      extendBodyBehindAppBar: true,
 
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Login Form
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(labelText: "Email"),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: _validateEmail,
-                  textInputAction: TextInputAction.next,
-                ),
-
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(labelText: "Password"),
-                  obscureText: true,
-                  validator: _validatePassword,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) {
-                    if (!_loading) _submit();
-                  },
-                ),
-
-                // Signup Fields shown
-                if (!_isLogin) ...[
-                  TextFormField(
-                    controller: _firstNameController,
-                    decoration: const InputDecoration(labelText: "First Name"),
-                    validator: (v) => _validateRequired(v, "First name"),
-                    textInputAction: TextInputAction.next,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: _lastNameController,
-                    decoration: const InputDecoration(labelText: "Last Name"),
-                    validator: (v) => _validateRequired(v, "Last name"),
-                    textInputAction: TextInputAction.next,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: _studentNumberController,
-                    decoration: const InputDecoration(
-                      labelText: "Student Number",
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: _validateStudentNumber,
-                    textInputAction: TextInputAction.next,
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: _programController,
-                    decoration: const InputDecoration(labelText: "Program"),
-                    validator: (v) => _validateRequired(v, "Program"),
-                    textInputAction: TextInputAction.next,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedFaculty,
-                    decoration: const InputDecoration(labelText: "Faculty"),
-                    items: _faculties
-                        .map((f) => DropdownMenuItem(value: f, child: Text(f)))
-                        .toList(),
-                    onChanged: (val) => setState(() => _selectedFaculty = val),
-                    validator: (v) => v == null ? "Faculty is required" : null,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedYear,
-                    decoration: const InputDecoration(labelText: "Year"),
-                    items: _years
-                        .map(
-                          (y) => DropdownMenuItem(
-                            value: y,
-                            child: Text("Year $y"),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (val) => setState(() => _selectedYear = val),
-                    validator: (v) => v == null ? "Year is required" : null,
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                const SizedBox(height: 24),
-
-                // If there is an error, place to show
-                if (_error != null)
-                  Text(_error!, style: const TextStyle(color: Colors.red)),
-
-                const SizedBox(height: 12),
-
-                // Login/Signup Submt Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _loading ? null : _submit,
-                    child: _loading
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(_isLogin ? "Login" : "Sign Up"),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Toggle button for signup or signin
-                TextButton(
-                  onPressed: _toggleMode,
-                  child: Text(
-                    _isLogin
-                        ? "Don't have an account? Sign up"
-                        : "Already have an account? Login",
-                  ),
-                ),
-              ],
+      body: SizedBox.expand(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Background Image
+            Image.asset(
+              "assets/backgrounds/LoginBackground.png",
+              fit: BoxFit.fill, // Compress/Stretch to fit screen
             ),
-          ),
+            SafeArea(
+              child: Padding(
+                // Padding/placement on screen for the login/signup card
+                padding: const EdgeInsets.fromLTRB(24, 70, 24, 24),
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: _formKey,
+                    child: Container(
+                      // Padding inside of the login card
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: const Color(0x22000000), // subtle dark glass
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0x33FFFFFF)),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 10),
+
+                          // Login Form (always shown)
+                          if (_isLogin || (!_isLogin && _signupStep == 0)) ...[
+                            TextFormField(
+                              controller: _emailController,
+                              decoration: _inputDecoration(
+                                "Email",
+                                icon: Icons.email,
+                              ),
+                              style: const TextStyle(color: Colors.white),
+                              keyboardType: TextInputType.emailAddress,
+                              validator: _validateEmail,
+                              textInputAction: TextInputAction.next,
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            TextFormField(
+                              controller: _passwordController,
+                              decoration: _inputDecoration(
+                                "Password",
+                                icon: Icons.lock_outline,
+                              ),
+                              style: const TextStyle(color: Colors.white),
+                              obscureText: true,
+                              validator: _validatePassword,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) {
+                                if (!_loading) _submit();
+                              },
+                            ),
+                          ],
+
+                          // Signup Fields shown
+                          if (!_isLogin) ...[
+                            // STEP 1: email/password already shown above, now show:
+                            // firstname, lastname, student number
+                            if (_signupStep == 0) ...[
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _firstNameController,
+                                decoration: _inputDecoration(
+                                  "First Name",
+                                  icon: Icons.person_outline,
+                                ),
+                                style: const TextStyle(color: Colors.white),
+                                validator: (v) =>
+                                    _validateRequired(v, "First name"),
+                                textInputAction: TextInputAction.next,
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              TextFormField(
+                                controller: _lastNameController,
+                                decoration: _inputDecoration(
+                                  "Last Name",
+                                  icon: Icons.person_outline,
+                                ),
+                                style: const TextStyle(color: Colors.white),
+                                validator: (v) =>
+                                    _validateRequired(v, "Last name"),
+                                textInputAction: TextInputAction.next,
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              TextFormField(
+                                controller: _studentNumberController,
+                                decoration: _inputDecoration(
+                                  "Student Number",
+                                  icon: Icons.badge_outlined,
+                                ),
+                                style: const TextStyle(color: Colors.white),
+                                keyboardType: TextInputType.number,
+                                validator: _validateStudentNumber,
+                                textInputAction: TextInputAction.done,
+                                onFieldSubmitted: (_) {
+                                  if (!_loading) _submit(); // "Next"
+                                },
+                              ),
+                            ],
+
+                            // STEP 2: program, faculty, year
+                            if (_signupStep == 1) ...[
+                              // Optional back button so user can return to step 1
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton.icon(
+                                  onPressed: _loading ? null : _backSignupStep,
+                                  icon: const Icon(
+                                    Icons.arrow_back,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text(
+                                    "Back",
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                              ),
+
+                              TextFormField(
+                                controller: _programController,
+                                decoration: _inputDecoration(
+                                  "Program",
+                                  icon: Icons.menu_book_outlined,
+                                ),
+                                style: const TextStyle(color: Colors.white),
+                                validator: (v) =>
+                                    _validateRequired(v, "Program"),
+                                textInputAction: TextInputAction.next,
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              DropdownButtonFormField<String>(
+                                value: _selectedFaculty,
+                                decoration: _inputDecoration(
+                                  "Faculty",
+                                  icon: Icons.school_outlined,
+                                ),
+                                dropdownColor: const Color(0xFF0B2C66),
+                                style: const TextStyle(color: Colors.white),
+                                items: _faculties
+                                    .map(
+                                      (f) => DropdownMenuItem(
+                                        value: f,
+                                        child: Text(f),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() => _selectedFaculty = val),
+                                validator: (v) =>
+                                    v == null ? "Faculty is required" : null,
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              DropdownButtonFormField<String>(
+                                value: _selectedYear,
+                                decoration: _inputDecoration(
+                                  "Year",
+                                  icon: Icons.calendar_today_outlined,
+                                ),
+                                dropdownColor: const Color(0xFF0B2C66),
+                                style: const TextStyle(color: Colors.white),
+                                items: _years
+                                    .map(
+                                      (y) => DropdownMenuItem(
+                                        value: y,
+                                        child: Text("Year $y"),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() => _selectedYear = val),
+                                validator: (v) =>
+                                    v == null ? "Year is required" : null,
+                              ),
+                            ],
+                          ],
+
+                          const SizedBox(height: 24),
+
+                          // If there is an error, place to show
+                          if (_error != null)
+                            Text(
+                              _error!,
+                              style: const TextStyle(color: Color(0xFFFFB4B4)),
+                            ),
+
+                          const SizedBox(height: 12),
+
+                          // Login/Signup Submt Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _loading ? null : _submit,
+                              child: _loading
+                                  ? const SizedBox(
+                                      height: 18,
+                                      width: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(buttonText),
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          // Toggle button for signup or signin
+                          TextButton(
+                            onPressed: _toggleMode,
+                            child: Text(
+                              _isLogin
+                                  ? "Don't have an account? Sign up"
+                                  : "Already have an account? Login",
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
