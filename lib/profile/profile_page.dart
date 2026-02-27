@@ -237,6 +237,28 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           label: const Text("Change Email"),
         ),
 
+        // Sign out button
+        OutlinedButton.icon(
+          onPressed: (_isSigningOut || _isSaving)
+              ? null
+              : () async {
+                  setState(() => _isSigningOut = true);
+
+                  Navigator.of(context).pop();
+
+                  await auth.signOut();
+                },
+          icon: _isSigningOut
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.logout),
+          label: const Text("Sign Out"),
+          style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+        ),
+
         const SizedBox(height: 18),
 
         // Profile information
@@ -448,40 +470,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           // Space for save button
           const SizedBox(height: 16),
         ],
-
-        // Sign Out Button
-        ElevatedButton(
-          // Disable if signout or saving
-          onPressed: (_isSigningOut || _isSaving)
-              ? null
-              : () async {
-                  // On signout
-                  setState(() => _isSigningOut = true); // Set signout true
-
-                  Navigator.of(context).pop(); // Pop back
-
-                  // Signout, allowing main to route back to login
-                  await auth.signOut();
-                },
-          // Signout button styling
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-          child:
-              _isSigningOut // If is signing out
-              ? const SizedBox(
-                  // Put a circle loading indication in place of the text
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              // Otherwise display the signout out btn text
-              : const Text("Sign Out", style: TextStyle(color: Colors.white)),
-        ),
       ],
     );
   }

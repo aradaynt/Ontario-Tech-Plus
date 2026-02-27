@@ -264,17 +264,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       // Padding inside of the login card
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        color: const Color(0x22000000), // subtle dark glass
+                        color: const Color(0x22000000),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: const Color(0x33FFFFFF)),
                       ),
+
+                      // Column for the login card
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const SizedBox(height: 10),
-
-                          // Login Form (always shown)
+                          const SizedBox(
+                            height: 10,
+                          ), //Space from top of card before first field
+                          // Login Form (will hide on step 2 of signup)
                           if (_isLogin || (!_isLogin && _signupStep == 0)) ...[
+                            // Email input
                             TextFormField(
                               controller: _emailController,
                               decoration: _inputDecoration(
@@ -289,6 +293,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                             const SizedBox(height: 16),
 
+                            // Password input
                             TextFormField(
                               controller: _passwordController,
                               decoration: _inputDecoration(
@@ -305,12 +310,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             ),
                           ],
 
-                          // Signup Fields shown
+                          // Signup Fields shown on toggle
                           if (!_isLogin) ...[
-                            // STEP 1: email/password already shown above, now show:
+                            // Step 1: email/password already shown, now show
                             // firstname, lastname, student number
                             if (_signupStep == 0) ...[
                               const SizedBox(height: 16),
+
+                              // First name field
                               TextFormField(
                                 controller: _firstNameController,
                                 decoration: _inputDecoration(
@@ -325,6 +332,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                               const SizedBox(height: 16),
 
+                              // Last name input field
                               TextFormField(
                                 controller: _lastNameController,
                                 decoration: _inputDecoration(
@@ -339,6 +347,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                               const SizedBox(height: 16),
 
+                              // Student number input field
                               TextFormField(
                                 controller: _studentNumberController,
                                 decoration: _inputDecoration(
@@ -355,9 +364,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               ),
                             ],
 
-                            // STEP 2: program, faculty, year
+                            // AFter user hits the next button, go to step 2
+                            // Step 2: program, faculty, year
                             if (_signupStep == 1) ...[
-                              // Optional back button so user can return to step 1
+                              // Back button so user can return to step 1
                               Align(
                                 alignment: Alignment.centerLeft,
                                 child: TextButton.icon(
@@ -373,6 +383,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 ),
                               ),
 
+                              // Program input field
                               TextFormField(
                                 controller: _programController,
                                 decoration: _inputDecoration(
@@ -387,8 +398,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                               const SizedBox(height: 16),
 
+                              // Faculty drop down selection
                               DropdownButtonFormField<String>(
-                                value: _selectedFaculty,
+                                initialValue: _selectedFaculty,
                                 decoration: _inputDecoration(
                                   "Faculty",
                                   icon: Icons.school_outlined,
@@ -411,8 +423,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                               const SizedBox(height: 16),
 
+                              // Year section drop down
                               DropdownButtonFormField<String>(
-                                value: _selectedYear,
+                                initialValue: _selectedYear,
                                 decoration: _inputDecoration(
                                   "Year",
                                   icon: Icons.calendar_today_outlined,
