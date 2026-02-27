@@ -18,7 +18,8 @@ import 'package:ontario_tech_plus/schedule/view_my_schedule_page.dart';
 import 'package:ontario_tech_plus/schedule/courses/add_course_page.dart';
 import 'package:ontario_tech_plus/schedule/courses/drop_course_page.dart';
 
-import 'package:ontario_tech_plus/shell_page.dart'; //This page is the shell for the nav bar
+import 'package:ontario_tech_plus/shell_page.dart'; // This page is the shell for the nav bar
+import 'package:ontario_tech_plus/theme/theme_provider.dart'; // Theme provider
 
 Future<void> main() async {
   //Ensures Flutter engine/bindings are ready before doing async work
@@ -44,17 +45,37 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(
-      authStateProvider,
-    ); //Watch the auth state to decide routing
+    //Watch the auth state to decide routing
+    final authState = ref.watch(authStateProvider);
+
+    //Watch the theme mode from provider
+    final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
       // App title
       title: 'Ontario Tech Plus',
-      // Theme
+
+      // ================== Light Theme ======================
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.light,
+        ),
       ),
+
+      // ================== Dark Theme ======================
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
+      ),
+
+      // Active Theme Mode (Controlled by Riverpod)
+      themeMode: themeMode,
+
       routes: {
         // Profile route
         '/profile': (_) => const ProfilePage(),
@@ -66,12 +87,15 @@ class MyApp extends ConsumerWidget {
         '/add_course': (_) => const AddCoursePage(),
         '/drop_course': (_) => const DropCoursePage(),
       },
-      // Routing
+
+      // ================== Routing ======================
       home: authState.when(
         data: (session) =>
             session != null ? const ShellPage() : const LoginPage(),
+
         loading: () =>
             const Scaffold(body: Center(child: CircularProgressIndicator())),
+
         error: (_, __) =>
             const Scaffold(body: Center(child: Text("Something went wrong"))),
       ),

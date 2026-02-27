@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ontario_tech_plus/profile/profile_provider.dart';
 
+import '../profile/profile_provider.dart';
+
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
