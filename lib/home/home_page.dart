@@ -8,8 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ontario_tech_plus/profile/profile_provider.dart';
 
-import '../profile/profile_provider.dart';
-
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
@@ -114,24 +112,6 @@ class HomePage extends ConsumerWidget {
                         },
                       ),
                     ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // ================== Sign Out Button ======================
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    onPressed: () {
-                      // TODO: implement sign out logic
-                      Navigator.pushReplacementNamed(context, '/login');
-                    },
-                    child: const Text("Sign Out"),
                   ),
                 ),
               ],
