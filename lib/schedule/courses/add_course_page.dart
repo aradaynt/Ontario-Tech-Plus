@@ -14,9 +14,14 @@ class AddCoursePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Courses and subjects
     final subjectsAsync = ref.watch(courseSubjectOptionsProvider);
     final coursesAsync = ref.watch(filteredCoursesProvider);
+
+    // Watch the filter options
     final selectedFilter = ref.watch(courseSubjectFilterProvider);
+    final termOptionsAsync = ref.watch(courseTermOptionsProvider);
+    final selectedTerm = ref.watch(courseTermFilterProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text("Add a course")),
@@ -28,6 +33,7 @@ class AddCoursePage extends ConsumerWidget {
               data: (subjects) {
                 return Row(
                   children: [
+                    // =========== Filter by subject ===========
                     const Text(
                       "Filter by Subject:",
                       style: TextStyle(fontWeight: FontWeight.w600),
@@ -70,6 +76,58 @@ class AddCoursePage extends ConsumerWidget {
               },
               loading: () => const LinearProgressIndicator(),
               error: (err, _) => Text("Error loading subjects: $err"),
+            ),
+            const SizedBox(height: 16),
+
+            // =========== Term filter ===========
+            termOptionsAsync.when(
+              data: (terms) {
+                if (terms.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                return Row(
+                  children: [
+                    const Text(
+                      "Filter by Term:",
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<String?>(
+                        initialValue: selectedTerm,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                        ),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text("All Terms"),
+                          ),
+                          ...terms.map(
+                            (t) => DropdownMenuItem<String?>(
+                              value: t,
+                              child: Text(t),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          ref
+                              .read(courseTermFilterProvider.notifier)
+                              .setTerm(value);
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
+              loading: () => const LinearProgressIndicator(),
+              error: (err, _) => Text("Error loading terms: $err"),
             ),
 
             const SizedBox(height: 16),

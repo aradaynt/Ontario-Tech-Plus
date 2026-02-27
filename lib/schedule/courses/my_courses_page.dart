@@ -34,6 +34,17 @@ class MyCoursesPage extends ConsumerWidget {
                   return const SizedBox.shrink();
                 }
 
+                // If no term selected yet, automatically select most recent term
+                if (selectedTerm == null) {
+                  Future.microtask(() {
+                    ref
+                        .read(myCoursesTermFilterProvider.notifier)
+                        .setTerm(
+                          terms.first,
+                        ); // terms already sorted newest-first
+                  });
+                }
+
                 return Row(
                   children: [
                     const Text(
@@ -46,7 +57,7 @@ class MyCoursesPage extends ConsumerWidget {
                     // Drop down expands to fill row
                     Expanded(
                       child: DropdownButtonFormField<String?>(
-                        initialValue: selectedTerm,
+                        initialValue: selectedTerm ?? terms.first,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),

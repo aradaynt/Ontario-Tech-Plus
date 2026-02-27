@@ -43,14 +43,56 @@ final allCoursesProvider = FutureProvider<List<Course>>((ref) async {
       .toList();
 });
 
-/// Filtered list for UI
-final filteredCoursesProvider = Provider<AsyncValue<List<Course>>>((ref) {
-  final filter = ref.watch(courseSubjectFilterProvider);
+// Stores currently selected term filter for all courses (null = All)
+final courseTermFilterProvider =
+    NotifierProvider<CourseTermFilterNotifier, String?>(
+      CourseTermFilterNotifier.new,
+    );
+
+class CourseTermFilterNotifier extends Notifier<String?> {
+  @override
+  String? build() => null; // null = All
+  void setTerm(String? value) => state = value;
+  void clear() => state = null;
+}
+
+// Term dropdown options from loaded all courses
+final courseTermOptionsProvider = Provider<AsyncValue<List<String>>>((ref) {
   final coursesAsync = ref.watch(allCoursesProvider);
 
   return coursesAsync.whenData((courses) {
-    if (filter == null) return courses;
-    return courses.where((c) => c.subjectCode == filter).toList();
+    final terms =
+        courses
+            .map((c) => c.term.trim())
+            .where((t) => t.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort((a, b) => b.compareTo(a)); // newest first
+
+    return terms;
+  });
+});
+
+/// Filtered list for UI
+final filteredCoursesProvider = Provider<AsyncValue<List<Course>>>((ref) {
+  final subjectFilter = ref.watch(courseSubjectFilterProvider);
+  final termFilter = ref.watch(courseTermFilterProvider);
+  final coursesAsync = ref.watch(allCoursesProvider);
+
+  return coursesAsync.whenData((courses) {
+    var filtered = courses;
+
+    if (subjectFilter != null) {
+      filtered = filtered.where((c) => c.subjectCode == subjectFilter).toList();
+    }
+
+    if (termFilter != null) {
+      filtered = filtered
+          .where((c) => c.term.trim() == termFilter.trim())
+          .toList();
+    }
+
+    return filtered;
   });
 });
 
