@@ -57,7 +57,10 @@ class AppBottomNav extends StatelessWidget {
           NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.event), label: 'Appointment'),
           NavigationDestination(icon: Icon(Icons.add_box), label: 'Booking'),
-          NavigationDestination(icon: Icon(Icons.schedule), label: 'Academics'),
+          NavigationDestination(
+            icon: Icon(Icons.menu_book),
+            label: 'Academics',
+          ),
           NavigationDestination(
             icon: Icon(Icons.navigation),
             label: 'Navigation',
