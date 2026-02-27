@@ -40,7 +40,7 @@ class _EmailPageState extends State<EmailPage> {
   }
 
   Future<void> _loadFile() async {
-    await dotenv.load(fileName: ".env");
+    await dotenv.load(fileName: "..env");
     if (mounted) setState(() {});
   }
 

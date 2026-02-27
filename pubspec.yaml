@@ -71,7 +71,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - .env
+    - ..env
 
     - assets/backgrounds/LoginBackground.png
     - assets/backgrounds/LoginBackground2.png
