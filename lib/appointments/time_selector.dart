@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // Added Supabase
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../student.dart';
 import 'email_page.dart';
@@ -60,6 +60,40 @@ class _SpecificTimeState extends State<SpecificTime> {
     }
   }
 
+  String _formatDateForSupabase(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '';
+
+    try {
+      final cleanStr = dateStr.replaceAll(',', '');
+      final parts = cleanStr.split(' ');
+
+      if (parts.length < 3) return dateStr;
+
+      const months = {
+        'January': '01',
+        'February': '02',
+        'March': '03',
+        'April': '04',
+        'May': '05',
+        'June': '06',
+        'July': '07',
+        'August': '08',
+        'September': '09',
+        'October': '10',
+        'November': '11',
+        'December': '12',
+      };
+
+      final month = months[parts[0]] ?? '01';
+      final day = parts[1].padLeft(2, '0');
+      final year = parts[2];
+
+      return '$year-$month-$day';
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
   Future<void> _fetchBookedDates() async {
     if (widget.weekLabel == null) {
       setState(() => _isLoading = false);
@@ -69,11 +103,18 @@ class _SpecificTimeState extends State<SpecificTime> {
     try {
       final supabase = Supabase.instance.client;
 
+      final isAdvisor = widget.advisor != null;
+      final targetTable = isAdvisor ? 'advisor_booked' : 'booked';
+      final targetColumn = isAdvisor ? 'advisor_id' : 'prof_id';
+      final targetId = isAdvisor ? widget.advisor!.id : widget.instructor!.id;
+
+      final formattedDate = _formatDateForSupabase(widget.weekLabel);
+
       final response = await supabase
-          .from('booked')
+          .from(targetTable)
           .select('start')
-          .eq('prof_id', widget.instructor!.id)
-          .eq('date', widget.weekLabel as Object);
+          .eq(targetColumn, targetId)
+          .eq('date', formattedDate);
 
       final Set<String> fetchedBookedTimes = {};
 
