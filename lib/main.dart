@@ -12,6 +12,12 @@ import 'package:ontario_tech_plus/auth/login_page.dart';
 
 import 'package:ontario_tech_plus/profile/profile_page.dart'; // To display the users name and student number
 
+import 'package:ontario_tech_plus/schedule/courses/my_courses_page.dart';
+import 'package:ontario_tech_plus/schedule/courses/course_management_page.dart';
+import 'package:ontario_tech_plus/schedule/view_my_schedule_page.dart';
+import 'package:ontario_tech_plus/schedule/courses/add_course_page.dart';
+import 'package:ontario_tech_plus/schedule/courses/drop_course_page.dart';
+
 import 'package:ontario_tech_plus/shell_page.dart'; //This page is the shell for the nav bar
 
 Future<void> main() async {
@@ -50,8 +56,15 @@ class MyApp extends ConsumerWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       ),
       routes: {
-        // Empty for now, but will be for any page pushing later. Example:
+        // Profile route
         '/profile': (_) => const ProfilePage(),
+
+        // course/schedule Routes
+        '/courses': (_) => const MyCoursesPage(),
+        '/view_schedule': (_) => const ViewMySchedulePage(),
+        '/course_management': (_) => const CourseManagementPage(),
+        '/add_course': (_) => const AddCoursePage(),
+        '/drop_course': (_) => const DropCoursePage(),
       },
       // Routing
       home: authState.when(
