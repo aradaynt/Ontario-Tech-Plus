@@ -77,7 +77,7 @@ class _CourseAppointmentPageState extends State<CourseAppointmentPage> {
         instructor (id, name, email, type, faculty, office),
         office_hours (id, day, start, end)
       ''')
-          .eq('course_id', courseId); // 2. CHANGE THIS to search by course_id!
+          .eq('course_id', courseId);
 
       List<Instructor> fetchedInstructors = [];
 
