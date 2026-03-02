@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:ontario_tech_plus/appointments/week_selector.dart'; // Update path if needed
+import 'package:ontario_tech_plus/appointments/week_selector.dart';
 import '../student.dart';
 
 class AdvisorAppointmentPage extends StatefulWidget {
@@ -16,16 +16,7 @@ class _AdvisorAppointmentPageState extends State<AdvisorAppointmentPage> {
   int selectedIndex = -1;
   int selectedDate = -1;
 
-  // Placeholder student object
-  late Student student1 = Student(
-    name: "Arad Ayntabli",
-    studentid: 100845722,
-    email: "arad.ayntabli@ontariotechu.net",
-    program: "Computer Science",
-    faculty: "science",
-    year: 4,
-    courses: [],
-  );
+  late Student student1;
 
   @override
   void initState() {
@@ -36,6 +27,27 @@ class _AdvisorAppointmentPageState extends State<AdvisorAppointmentPage> {
   Future<void> _fetchAdvisorData() async {
     try {
       final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        throw Exception("User is not logged in!");
+      }
+
+      final profileResponse = await supabase
+          .from('profiles')
+          .select()
+          .eq('id', user.id)
+          .single();
+
+      student1 = Student(
+        name: "${profileResponse['firstname']} ${profileResponse['lastname']}",
+        studentid: int.parse(profileResponse['student_number'].toString()),
+        email: profileResponse['email'],
+        program: profileResponse['program'],
+        faculty: profileResponse['faculty'],
+        year: int.parse(profileResponse['year'].toString()),
+        courses: [],
+      );
 
       final advisorResponse = await supabase
           .from('advisors')

@@ -130,35 +130,33 @@ class _EmailPageState extends State<EmailPage> {
               ),
             ),
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: TextFormField(
-                    minLines: 20,
-                    maxLines: null,
-                    controller: _bodyController,
-                    decoration: InputDecoration(
-                      hintText: "Body",
-                      hintStyle: TextStyle(
-                        color: Colors.black.withValues(alpha: 0.4),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                        borderSide: const BorderSide(
-                          color: Colors.grey,
-                          width: 2.0,
-                        ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: TextFormField(
+                  minLines: 20,
+                  maxLines: null,
+                  controller: _bodyController,
+                  decoration: InputDecoration(
+                    hintText: "Body",
+                    hintStyle: TextStyle(
+                      color: Colors.black.withValues(alpha: 0.4),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                      borderSide: const BorderSide(
+                        color: Colors.grey,
+                        width: 2.0,
                       ),
                     ),
-                    onChanged: (value) {
-                      setState(() {
-                        body = value;
-                      });
-                    },
                   ),
+                  onChanged: (value) {
+                    setState(() {
+                      body = value;
+                    });
+                  },
                 ),
               ),
             ),
