@@ -29,7 +29,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   //Load enviroment variables from ..env
-  await dotenv.load(fileName: '..env');
+  await dotenv.load(fileName: '.env');
 
   // Initialize Supabase at app start
   await Supabase.initialize(

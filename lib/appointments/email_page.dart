@@ -40,7 +40,7 @@ class _EmailPageState extends State<EmailPage> {
   }
 
   Future<void> _loadFile() async {
-    await dotenv.load(fileName: "..env");
+    await dotenv.load(fileName: ".env");
     if (mounted) setState(() {});
   }
 
@@ -130,10 +130,10 @@ class _EmailPageState extends State<EmailPage> {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Card(
-              child: Expanded(
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Card(
                 child: Padding(
                   padding: const EdgeInsets.all(4.0),
                   child: TextFormField(
