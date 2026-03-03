@@ -1,6 +1,6 @@
 // OntarioTechPlus - main.dart
-// PLEASE NOTE: YOU MUST HAVE THE ..env IN YOUR PROJECT ROOT FOLDER
-// Initializes the app including supabase using ..env
+// PLEASE NOTE: YOU MUST HAVE THE ...env IN YOUR PROJECT ROOT FOLDER
+// Initializes the app including supabase using ...env
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,8 +28,8 @@ Future<void> main() async {
   //Required for: Loading dotenv, init plugins, etc
   WidgetsFlutterBinding.ensureInitialized();
 
-  //Load enviroment variables from ..env
-  await dotenv.load(fileName: '..env');
+  //Load enviroment variables from ...env
+  await dotenv.load(fileName: '...env');
 
   // Initialize Supabase at app start
   await Supabase.initialize(
@@ -104,7 +104,7 @@ class MyApp extends ConsumerWidget {
         loading: () =>
             const Scaffold(body: Center(child: CircularProgressIndicator())),
 
-        error: (_, __) =>
+        error: (_, _) =>
             const Scaffold(body: Center(child: Text("Something went wrong"))),
       ),
     );

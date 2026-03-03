@@ -4,7 +4,6 @@
 // and allows it to be toggled from anywhere in the app.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 // StateNotifier that holds ThemeMode
