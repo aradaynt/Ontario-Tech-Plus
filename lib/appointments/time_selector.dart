@@ -25,6 +25,7 @@ class SpecificTime extends StatefulWidget {
 }
 
 class _SpecificTimeState extends State<SpecificTime> {
+  final ScrollController _scrollController = ScrollController();
   bool _isLoading = true;
   List<Dates> timeslots = [];
   int selectedTime = -1;
@@ -35,6 +36,12 @@ class _SpecificTimeState extends State<SpecificTime> {
     super.initState();
     generateTimeslots();
     _fetchBookedDates();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void generateTimeslots() {
@@ -159,10 +166,12 @@ class _SpecificTimeState extends State<SpecificTime> {
               child: Padding(
                 padding: const EdgeInsets.only(top: 8, right: 8),
                 child: Scrollbar(
+                  controller: _scrollController,
                   thumbVisibility: true,
                   thickness: 12,
                   radius: const Radius.circular(10),
                   child: ListView.builder(
+                    primary: false,
                     padding: const EdgeInsets.only(
                       left: 16,
                       right: 8,
