@@ -186,72 +186,97 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
                     itemCount: allAppointments.length,
                     itemBuilder: (context, index) {
                       final appointment = allAppointments[index];
-                      return Dismissible(
-                        key: UniqueKey(),
-                        direction: DismissDirection.endToStart,
-                        resizeDuration: null,
-                        background: Container(
-                          color: colorScheme.error,
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
                         ),
-                        secondaryBackground: Container(
-                          color: Colors.red,
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
-                          child: const Icon(
-                            Icons.delete,
-                            color: Colors.white,
-                            size: 30,
-                          ),
-                        ),
-                        onDismissed: (direction) async {
-                          setState(() {
-                            if (appointment.tableName == 'advisor_booked') {
-                              myAdvisorAppointments.removeAt(index);
-                            } else {
-                              myCourseAppointments.removeAt(index);
-                            }
-                          });
-
-                          try {
-                            await Supabase.instance.client
-                                .from(appointment.tableName)
-                                .delete()
-                                .eq('id', appointment.id);
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  "Appointment with ${appointment.who} cancelled",
-                                ),
-                              ),
-                            );
-                          } catch (e) {
-                            print("Delete failed: $e");
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Failed to cancel appointment. Please try again.",
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: Card(
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
+                        child: Dismissible(
+                          key: UniqueKey(),
+                          direction: DismissDirection.endToStart,
+                          resizeDuration: null,
+                          background: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Text(
-                                appointment.toString(),
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            child: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                              size: 30,
+                            ),
+                          ),
+                          confirmDismiss: (direction) async {
+                            return await showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: const Text("Confirm"),
+                                  content: const Text(
+                                    "Are you sure you want to cancel this appointment?",
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(true),
+                                      child: const Text("DELETE"),
+                                    ),
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(false),
+                                      child: const Text("CANCEL"),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                          onDismissed: (direction) async {
+                            setState(() {
+                              if (appointment.tableName == 'advisor_booked') {
+                                myAdvisorAppointments.removeAt(index);
+                              } else {
+                                myCourseAppointments.removeAt(index);
+                              }
+                            });
+
+                            try {
+                              await Supabase.instance.client
+                                  .from(appointment.tableName)
+                                  .delete()
+                                  .eq('id', appointment.id);
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    "Appointment with ${appointment.who} cancelled",
+                                  ),
+                                ),
+                              );
+                            } catch (e) {
+                              print("Delete failed: $e");
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    "Failed to cancel appointment. Please try again.",
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Text(
+                                  appointment.toString(),
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
