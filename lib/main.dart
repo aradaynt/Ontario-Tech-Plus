@@ -1,4 +1,6 @@
 // OntarioTechPlus - main.dart
+// NOTE: You must have a `.env` file in the project root.
+// Initializes the app and Supabase using values from `.env`.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -15,19 +17,23 @@ import 'package:ontario_tech_plus/schedule/courses/course_management_page.dart';
 import 'package:ontario_tech_plus/schedule/view_my_schedule_page.dart';
 import 'package:ontario_tech_plus/schedule/courses/add_course_page.dart';
 import 'package:ontario_tech_plus/schedule/courses/drop_course_page.dart';
-import 'package:ontario_tech_plus/shell_page.dart';
-import 'package:ontario_tech_plus/theme/theme_provider.dart';
+import 'package:ontario_tech_plus/shell_page.dart'; // Shell for bottom navigation
+import 'package:ontario_tech_plus/theme/theme_provider.dart'; // Riverpod theme provider
 
 Future<void> main() async {
+  // Ensure Flutter bindings are ready before async initialization.
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Load environment variables from project root `.env`.
   await dotenv.load(fileName: '.env');
 
+  // Initialize Supabase client at app startup.
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL'] ?? '',
     anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
   );
 
+  // ProviderScope is required for Riverpod providers.
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -36,22 +42,27 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch auth state to decide whether to show shell or login page.
     final authState = ref.watch(authStateProvider);
+    // Watch current app theme mode and computed ThemeData.
     final appThemeMode = ref.watch(themeProvider);
     final themeData = ref.watch(themeProvider.notifier).themeData;
 
     return MaterialApp(
+      // App title
       title: 'Ontario Tech Plus',
+      // Active app theme from Riverpod theme provider.
       theme: themeData.copyWith(useMaterial3: true),
       darkTheme: ThemeData.dark().copyWith(
         useMaterial3: true,
         primaryColor: const Color(0xFF003C71),
       ),
+      // Use Flutter ThemeMode.dark only for dark mode; other custom modes map to light.
       themeMode: appThemeMode == AppThemeMode.dark
           ? ThemeMode.dark
           : ThemeMode.light,
 
-      //Routing
+      // App routes
       routes: {
         '/profile': (_) => const ProfilePage(),
         '/courses': (_) => const MyCoursesPage(),
@@ -64,6 +75,7 @@ class MyApp extends ConsumerWidget {
         '/settings': (_) => const SettingsPage(),
       },
 
+      // Routing based on Supabase auth session state.
       home: authState.when(
         data: (session) =>
             session != null ? const ShellPage() : const LoginPage(),

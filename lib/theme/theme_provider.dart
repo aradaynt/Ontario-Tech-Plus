@@ -5,9 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Enum for theme modes
 enum AppThemeMode { light, dark, lessSaturated }
 
-// StateNotifier for managing theme
-class ThemeNotifier extends StateNotifier<AppThemeMode> {
-  ThemeNotifier() : super(AppThemeMode.light);
+// Notifier for managing theme (Riverpod 3 style)
+class ThemeNotifier extends Notifier<AppThemeMode> {
+  @override
+  AppThemeMode build() => AppThemeMode.light;
 
   void setTheme(AppThemeMode mode) => state = mode;
 
@@ -76,6 +77,6 @@ class ThemeNotifier extends StateNotifier<AppThemeMode> {
 }
 
 // Global provider
-final themeProvider = StateNotifierProvider<ThemeNotifier, AppThemeMode>(
-  (ref) => ThemeNotifier(),
+final themeProvider = NotifierProvider<ThemeNotifier, AppThemeMode>(
+  ThemeNotifier.new,
 );
