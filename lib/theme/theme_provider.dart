@@ -1,82 +1,98 @@
-// OntarioTechPlus - theme_provider.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// Enum for theme modes
 enum AppThemeMode { light, dark, lessSaturated }
 
-// Notifier for managing theme (Riverpod 3 style)
+class AppColors {
+  static const futureBlue = Color(0xFF003C71);
+  static const simcoeBlue = Color(0xFF0077CA);
+  static const techTangerine = Color(0xFFE75D2A);
+
+  static const lightBackground = Color(0xFFF6F7F9);
+  static const mutedBackground = Color(0xFFE8EAED);
+
+  static const cardLight = Colors.white;
+  static const cardMuted = Color(0xFFF1F2F4);
+
+  static const textDark = Color(0xFF1F2933);
+  static const textMuted = Color(0xFF5B6770);
+}
+
 class ThemeNotifier extends Notifier<AppThemeMode> {
   @override
   AppThemeMode build() => AppThemeMode.light;
 
   void setTheme(AppThemeMode mode) => state = mode;
 
-  void cycleTheme() {
-    switch (state) {
-      case AppThemeMode.light:
-        state = AppThemeMode.dark;
-        break;
-      case AppThemeMode.dark:
-        state = AppThemeMode.lessSaturated;
-        break;
-      case AppThemeMode.lessSaturated:
-        state = AppThemeMode.light;
-        break;
-    }
-  }
-
   ThemeData get themeData {
     switch (state) {
-      case AppThemeMode.dark:
-        return ThemeData.dark().copyWith(primaryColor: const Color(0xFF003C71));
-
-      case AppThemeMode.lessSaturated:
+      case AppThemeMode.light:
         return ThemeData(
           brightness: Brightness.light,
-          scaffoldBackgroundColor: const Color(0xFFACA39A),
-          cardColor: const Color(0xFFFFFFFF),
-          primaryColor: const Color(0xFF003C71),
+          scaffoldBackgroundColor: AppColors.lightBackground,
+          primaryColor: AppColors.futureBlue,
           colorScheme: const ColorScheme.light(
-            primary: Color(0xFF003C71),
-            secondary: Color(0xFFE75D2A),
-            surface: Color(0xFFACA39A),
-            onPrimary: Color(0xFFFFFFFF),
-            onSurface: Color(0xFF5B6770),
+            primary: AppColors.futureBlue,
+            secondary: AppColors.techTangerine,
           ),
-          iconTheme: const IconThemeData(color: Color(0xFF0077CA)),
+          cardColor: AppColors.cardLight,
+          iconTheme: const IconThemeData(color: AppColors.simcoeBlue),
+          dividerColor: Colors.grey.shade300,
           textTheme: const TextTheme(
-            bodyLarge: TextStyle(color: Color(0xFF5B6770)),
-            bodyMedium: TextStyle(color: Color(0xFFA7A8AA)),
-            titleMedium: TextStyle(color: Color(0xFFA7A8AA)),
+            bodyLarge: TextStyle(color: AppColors.textDark),
+            bodyMedium: TextStyle(color: AppColors.textMuted),
           ),
-          dividerColor: const Color(0xFFA7A8AA),
           appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFFACA39A),
-            foregroundColor: Color(0xFF5B6770),
+            backgroundColor: AppColors.futureBlue,
+            foregroundColor: Colors.white,
             elevation: 0,
-          ),
-          switchTheme: SwitchThemeData(
-            thumbColor: MaterialStateProperty.all(const Color(0xFF0077CA)),
-            trackColor: MaterialStateProperty.all(const Color(0xFFACA39A)),
           ),
         );
 
-      case AppThemeMode.light:
-      default:
+      case AppThemeMode.dark:
+        return ThemeData(
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: const Color(0xFF121212),
+          primaryColor: AppColors.futureBlue,
+          colorScheme: const ColorScheme.dark(
+            primary: AppColors.futureBlue,
+            secondary: AppColors.techTangerine,
+          ),
+          cardColor: const Color(0xFF1E1E1E),
+          iconTheme: const IconThemeData(color: AppColors.simcoeBlue),
+          dividerColor: Colors.grey,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: AppColors.futureBlue,
+            foregroundColor: Colors.white,
+          ),
+        );
+
+      case AppThemeMode.lessSaturated:
         return ThemeData(
           brightness: Brightness.light,
-          primaryColor: const Color(0xFF003C71),
+          scaffoldBackgroundColor: AppColors.mutedBackground,
+          primaryColor: AppColors.futureBlue,
+          cardColor: AppColors.cardMuted,
           colorScheme: const ColorScheme.light(
-            primary: Color(0xFF003C71),
-            secondary: Color(0xFFE75D2A),
+            primary: AppColors.futureBlue,
+            secondary: AppColors.simcoeBlue,
+          ),
+          iconTheme: const IconThemeData(color: AppColors.textMuted),
+          dividerColor: Colors.grey,
+          textTheme: const TextTheme(
+            bodyLarge: TextStyle(color: AppColors.textMuted),
+            bodyMedium: TextStyle(color: AppColors.textMuted),
+          ),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: AppColors.mutedBackground,
+            foregroundColor: AppColors.textDark,
+            elevation: 0,
           ),
         );
     }
   }
 }
 
-// Global provider
 final themeProvider = NotifierProvider<ThemeNotifier, AppThemeMode>(
   ThemeNotifier.new,
 );

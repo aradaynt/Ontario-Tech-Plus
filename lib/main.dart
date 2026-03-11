@@ -1,40 +1,37 @@
-// OntarioTechPlus - main.dart
-// NOTE: You must have a `.env` file in the project root.
-// Initializes the app and Supabase using values from `.env`.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// Pages
-import 'package:ontario_tech_plus/home/settings_page.dart';
-import 'package:ontario_tech_plus/recs(ml)/reccomendation_pages.dart';
-import 'package:ontario_tech_plus/auth/login_page.dart';
-import 'package:ontario_tech_plus/auth/auth_providers.dart';
-import 'package:ontario_tech_plus/profile/profile_page.dart';
-import 'package:ontario_tech_plus/schedule/courses/my_courses_page.dart';
-import 'package:ontario_tech_plus/schedule/courses/course_management_page.dart';
-import 'package:ontario_tech_plus/schedule/view_my_schedule_page.dart';
-import 'package:ontario_tech_plus/schedule/courses/add_course_page.dart';
-import 'package:ontario_tech_plus/schedule/courses/drop_course_page.dart';
-import 'package:ontario_tech_plus/shell_page.dart'; // Shell for bottom navigation
-import 'package:ontario_tech_plus/theme/theme_provider.dart'; // Riverpod theme provider
+import 'settings/settings_provider.dart';
+import 'theme/theme_provider.dart';
+import 'home/settings_page.dart';
+import 'auth/login_page.dart';
+import 'shell_page.dart';
 
 Future<void> main() async {
-  // Ensure Flutter bindings are ready before async initialization.
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Load environment variables from project root `.env`.
   await dotenv.load(fileName: '.env');
 
-  // Initialize Supabase client at app startup.
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL'] ?? '',
     anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
   );
 
-  // ProviderScope is required for Riverpod providers.
   runApp(const ProviderScope(child: MyApp()));
+}
+
+double getFontScale(FontSizeOption option) {
+  switch (option) {
+    case FontSizeOption.small:
+      return 0.85;
+    case FontSizeOption.medium:
+      return 1.0;
+    case FontSizeOption.large:
+      return 1.2;
+    case FontSizeOption.extraLarge:
+      return 1.4;
+  }
 }
 
 class MyApp extends ConsumerWidget {
@@ -42,48 +39,35 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch auth state to decide whether to show shell or login page.
-    final authState = ref.watch(authStateProvider);
-    // Watch current app theme mode and computed ThemeData.
-    final appThemeMode = ref.watch(themeProvider);
+    final themeModeState = ref.watch(themeProvider);
     final themeData = ref.watch(themeProvider.notifier).themeData;
+    final settings = ref.watch(settingsProvider);
+
+    final fontScale = getFontScale(settings.fontSize);
 
     return MaterialApp(
-      // App title
       title: 'Ontario Tech Plus',
-      // Active app theme from Riverpod theme provider.
-      theme: themeData.copyWith(useMaterial3: true),
+      debugShowCheckedModeBanner: false,
+      theme: themeData.copyWith(
+        useMaterial3: true,
+        textTheme: themeData.textTheme.apply(fontSizeFactor: fontScale),
+      ),
       darkTheme: ThemeData.dark().copyWith(
         useMaterial3: true,
-        primaryColor: const Color(0xFF003C71),
+        textTheme: ThemeData.dark().textTheme.apply(fontSizeFactor: fontScale),
       ),
-      // Use Flutter ThemeMode.dark only for dark mode; other custom modes map to light.
-      themeMode: appThemeMode == AppThemeMode.dark
+      themeMode: themeModeState == AppThemeMode.dark
           ? ThemeMode.dark
           : ThemeMode.light,
-
-      // App routes
-      routes: {
-        '/profile': (_) => const ProfilePage(),
-        '/courses': (_) => const MyCoursesPage(),
-        '/view_schedule': (_) => const ViewMySchedulePage(),
-        '/course_management': (_) => const CourseManagementPage(),
-        '/add_course': (_) => const AddCoursePage(),
-        '/drop_course': (_) => const DropCoursePage(),
-        '/recommendations': (_) => const RecommendationPage(),
-        '/schedule': (_) => const ViewMySchedulePage(),
-        '/settings': (_) => const SettingsPage(),
-      },
-
-      // Routing based on Supabase auth session state.
-      home: authState.when(
-        data: (session) =>
-            session != null ? const ShellPage() : const LoginPage(),
-        loading: () =>
-            const Scaffold(body: Center(child: CircularProgressIndicator())),
-        error: (_, __) =>
-            const Scaffold(body: Center(child: Text("Something went wrong"))),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaleFactor: fontScale),
+        child: child!,
       ),
+      home: const LoginPage(), // Replace with auth logic if needed
+      routes: {
+        '/settings': (_) => const SettingsPage(),
+        '/shell': (_) => const ShellPage(),
+      },
     );
   }
 }
