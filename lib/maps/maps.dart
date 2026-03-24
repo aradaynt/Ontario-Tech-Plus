@@ -313,6 +313,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                   _showAttribution = false;
                 }
 
+                // if currently routing allow user to cancel routing by
+                // tapping the map
                 if (event is MapEventTap && _isRouting) {
                   _selectionAnimationController.reverse().then((_) {
                     if (mounted) {
@@ -325,12 +327,16 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                   });
                 }
 
+                // on any map event update camera position
                 setState(() {
                   _cameraPosition = _mapController.camera.center;
                 });
 
+                // check to see if the camera and user position are centered
                 _checkIfCentered();
               },
+
+              // get camera position when the map is loaded
               onMapReady: () {
                 setState(() {
                   _cameraPosition = _mapController.camera.center;
@@ -364,24 +370,26 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                         // Conditionally change the color/opacity
                         // if it's the selected building
                         color:
-                        (_selectedBuilding?.name == building.name &&
-                            _isRouting)
+                            (_selectedBuilding?.name == building.name &&
+                                _isRouting)
                             ? _polygonColorAnimation.value ??
-                            Color(0xFF0077CA).withValues(alpha: 0.20)
+                                  Color(0xFF0077CA).withValues(alpha: 0.20)
                             : Color(0xFF0077CA).withValues(alpha: 0.20),
                         borderColor: Color(0xFF003C71),
                         // Use the animated border width
                         borderStrokeWidth:
-                        (_selectedBuilding?.name == building.name &&
-                            _isRouting)
+                            (_selectedBuilding?.name == building.name &&
+                                _isRouting)
                             ? _borderWidthAnimation.value
                             : 1.0,
                       ),
                   ],
                 ),
+                // on polygon tap set it as the selected building and play
+                // animation
                 onTap: () {
                   Building? tappedBuilding =
-                  _polygonHtNotifier.value?.hitValues.isNotEmpty == true
+                      _polygonHtNotifier.value?.hitValues.isNotEmpty == true
                       ? _polygonHtNotifier.value!.hitValues[0]
                       : null;
 
@@ -412,16 +420,15 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                           _routeAnimationController.reset(); // Reset the line
 
                           _routeFuture =
-                          fetchRoute(
-                            _currentPosition!,
-                            _selectedBuilding!.centre,
-                          )
-                            ..then((_) {
-                              // Play the animation once the future completes
-                              if (mounted && _isRouting) {
-                                _routeAnimationController.forward();
-                              }
-                            });
+                              fetchRoute(
+                                _currentPosition!,
+                                _selectedBuilding!.centre,
+                              )..then((_) {
+                                // Play the animation once the future completes
+                                if (mounted && _isRouting) {
+                                  _routeAnimationController.forward();
+                                }
+                              });
                         }
                       });
 
@@ -458,8 +465,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                           // Calculate how many points to show based
                           // on the animation (0.0 to 1.0)
                           int pointCount =
-                          (snapshot.data!.length * _routeAnimation.value)
-                              .ceil();
+                              (snapshot.data!.length * _routeAnimation.value)
+                                  .ceil();
 
                           // Grab only the visible points
                           List<LatLng> animatedPoints = snapshot.data!
@@ -493,7 +500,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                 SimpleAttributionWidget(
                   source: Text(
                     "OpenStreetMap Contributors\n"
-                        " OpenStreetRoutingMachine",
+                    " OpenStreetRoutingMachine",
                   ),
                 ),
             ],
@@ -541,7 +548,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                                   _isRouting = false;
                                   _selectedBuilding = null;
                                   _routeFuture =
-                                  null; // Clear the drawn route line
+                                      null; // Clear the drawn route line
                                 });
                               }
                             });
@@ -571,6 +578,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                       padding: EdgeInsetsGeometry.all(10),
                       backgroundColor: Color(0xFF5B6770),
                     ),
+                    // on press move the camera to the user's location
                     onPressed: () {
                       if (_currentPosition == null) return;
                       _mapController.move(_currentPosition!, 17);
@@ -618,21 +626,21 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
 
     // get position stream
     _positionStreamSubscription =
-    // create position stream and set location settings
-    Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 10,
-      ),
-      //   listen for position events
-    ).listen((Position position) {
-      // update position
-      setState(() {
-        _currentPosition = LatLng(position.latitude, position.longitude);
-      });
+        // create position stream and set location settings
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 10,
+          ),
+          //   listen for position events
+        ).listen((Position position) {
+          // update position
+          setState(() {
+            _currentPosition = LatLng(position.latitude, position.longitude);
+          });
 
-      _checkIfCentered();
-    });
+          _checkIfCentered();
+        });
   }
 
   // _handlerPermission method that asks the user for
@@ -675,22 +683,12 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   void _checkIfCentered() {
     if (_currentPosition == null || _cameraPosition == null) return;
 
-    print("_currentPosition = $_currentPosition");
-    print("_cameraPosition = $_cameraPosition");
-
-    // final distance = sqrt(
-    //   (pow(_currentPosition!.latitude - _cameraPosition!.latitude, 2) +
-    //       pow(_currentPosition!.longitude - _cameraPosition!.longitude, 2)),
-    // );
-
     double distance = Geolocator.distanceBetween(
       _currentPosition!.latitude,
       _currentPosition!.longitude,
       _cameraPosition!.latitude,
       _cameraPosition!.longitude,
     );
-
-    print("distance = $distance");
 
     if (!_showAttribution && distance > 5) {
       _recenterAnimationController.forward();
@@ -706,9 +704,9 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     final response = await http.get(
       Uri.parse(
         'http://router.project-osrm.org/route/v1/foot/'
-            '${start.longitude},${start.latitude};'
-            '${end.longitude},${end.latitude}?'
-            'overview=full&geometries=polyline&steps=true&generate_hints=false',
+        '${start.longitude},${start.latitude};'
+        '${end.longitude},${end.latitude}?'
+        'overview=full&geometries=polyline&steps=true&generate_hints=false',
       ),
     );
 
@@ -717,7 +715,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       // If the server did return a 200 OK response,
       // then parse the JSON.
       Map<String, dynamic> temp =
-      jsonDecode(response.body) as Map<String, dynamic>;
+          jsonDecode(response.body) as Map<String, dynamic>;
 
       String geometry = temp["routes"][0]["geometry"];
       List<PointLatLng> points = PolylinePoints.decodePolyline(geometry);
