@@ -31,18 +31,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   // location stream
   StreamSubscription<Position>? _positionStreamSubscription;
 
-  // FlutterMap objects
+  // FlutterMap controller
   final MapController _mapController = MapController();
-  final MapOptions _mapOptions = MapOptions(
-    // center the map on ontario tech north oshawa campus
-    initialCenter: LatLng(43.945152871124854, -78.89684924186564),
-    initialZoom: 16.5,
-    initialRotation: 16.0,
-    interactionOptions: InteractionOptions(
-      flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
-    ),
-    backgroundColor: Color(0xFFF7FCFF),
-  );
 
   // tile provider retrieves map tiles
   final TileProvider _tileProvider = NetworkTileProvider();
@@ -52,6 +42,9 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
 
   // device location
   LatLng? _currentPosition;
+
+  // camera position on map
+  LatLng? _cameraPosition;
 
   // selected building
   Building? _selectedBuilding;
@@ -192,7 +185,11 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   late AnimationController _selectionAnimationController;
   late Animation<Color?> _polygonColorAnimation;
   late Animation<double> _borderWidthAnimation;
-  late Animation<Offset> _slideAnimation;
+  late Animation<Offset> _nameBoxSlide;
+
+  // recenter animations
+  late AnimationController _recenterAnimationController;
+  late Animation<Offset> _recenterButtonSlide;
 
   // route polyline animation
   late AnimationController _routeAnimationController;
@@ -208,7 +205,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     super.initState();
     _setupLocation();
 
-    // initialize the controller
+    // initialize the select animation controller
     _selectionAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -234,8 +231,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       ),
     );
 
-    // define the slide transition
-    _slideAnimation =
+    // define the name box slide transition
+    _nameBoxSlide =
         Tween<Offset>(
           begin: const Offset(0.0, -2.0), // Start above the visible area
           end: Offset.zero, // End at the default position
@@ -246,11 +243,31 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
           ),
         );
 
+    // animation controller for the recenter button
+    _recenterAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+
+    // define recenter button slide animation
+    _recenterButtonSlide =
+        Tween<Offset>(
+          begin: const Offset(0.0, 2.0), // Start above the visible area
+          end: Offset.zero, // End at the default position
+        ).animate(
+          CurvedAnimation(
+            parent: _recenterAnimationController,
+            curve: Curves.easeOutBack,
+          ),
+        );
+
+    // route polyline animation controller
     _routeAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
 
+    // define polyline draw animation
     _routeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _routeAnimationController,
@@ -269,7 +286,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     // widget is organized into a stack with the map layer
     // as the bottom most element of the stack. All other
-    // Widgets are rendered on-top of it
+    // Widgets are rendered on-top of it.
     return Scaffold(
       appBar: AppBar(title: Text("Campus Map")),
       body: Stack(
@@ -279,30 +296,62 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
             // mapController defines how the map can be interacted with
             mapController: _mapController,
             // options sets the maps rules
-            options: _mapOptions,
+            options: MapOptions(
+              // center the map on ontario tech north oshawa campus
+              initialCenter: LatLng(43.945152871124854, -78.89684924186564),
+              initialZoom: 16.5,
+              initialRotation: 16.0,
+              interactionOptions: InteractionOptions(
+                flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+              ),
+              // onMapEvent used to detect when the user has interacted with the
+              // map. Used to hide attribution on map interact as allowed under
+              // OpenStreetMap Licencing and Attribution. Also detect if user
+              // has tapped map to disable routing.
+              onMapEvent: (event) {
+                if (event.runtimeType != MapEventNonRotatedSizeChange) {
+                  _showAttribution = false;
+                }
+
+                // if currently routing allow user to cancel routing by
+                // tapping the map
+                if (event is MapEventTap && _isRouting) {
+                  _selectionAnimationController.reverse().then((_) {
+                    if (mounted) {
+                      setState(() {
+                        _isRouting = false;
+                        _selectedBuilding = null;
+                        _routeFuture = null;
+                      });
+                    }
+                  });
+                }
+
+                // on any map event update camera position
+                setState(() {
+                  _cameraPosition = _mapController.camera.center;
+                });
+
+                // check to see if the camera and user position are centered
+                _checkIfCentered();
+              },
+
+              // get camera position when the map is loaded
+              onMapReady: () {
+                setState(() {
+                  _cameraPosition = _mapController.camera.center;
+                });
+              },
+              backgroundColor: Color(0xFFF7FCFF),
+            ),
             // children contains all the layers that make up the map
             children: [
               // First layer is the tile layer, this layer makes a call
-              // to a tile provider and displays it. This layer is wrapped
-              // in a gesture detector that hides the attribution on interaction.
-              // this is allowed under OpenStreetMap Licencing and Attribution
-              GestureDetector(
-                onPanStart: (details) {
-                  setState(() {
-                    _showAttribution = false;
-                  });
-                },
-                onTap: () {
-                  setState(() {
-                    _showAttribution = false;
-                    _isRouting = false;
-                  });
-                },
-                child: TileLayer(
-                  urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  userAgentPackageName: "mobile_devices_project",
-                  tileProvider: _tileProvider,
-                ),
+              // to a tile provider and displays it.
+              TileLayer(
+                urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                userAgentPackageName: "mobile_devices_project",
+                tileProvider: _tileProvider,
               ),
               // The second layer is polygon layer that draws polygons on the map
               // these polygons are constructed from a list of coordinates.
@@ -336,6 +385,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                       ),
                   ],
                 ),
+                // on polygon tap set it as the selected building and play
+                // animation
                 onTap: () {
                   Building? tappedBuilding =
                       _polygonHtNotifier.value?.hitValues.isNotEmpty == true
@@ -345,11 +396,18 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                   if (tappedBuilding != null) {
                     if (tappedBuilding.name == _selectedBuilding?.name) {
                       // Tapping the same building: toggle routing and reverse animation
-                      _isRouting = !_isRouting;
                       if (_isRouting) {
                         _selectionAnimationController.forward();
                       } else {
-                        _selectionAnimationController.reverse();
+                        _selectionAnimationController.reverse().then((_) {
+                          if (mounted) {
+                            setState(() {
+                              _isRouting = false;
+                              _selectedBuilding = null;
+                              _routeFuture = null;
+                            });
+                          }
+                        });
                       }
                     } else {
                       // Tapping a new building
@@ -397,13 +455,15 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                   future: _routeFuture, // Use the stored future!
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      // Optional: Show a loading indicator while the route fetches
+                      // Show a loading indicator while
+                      // the route fetches
                       return const Center(child: CircularProgressIndicator());
                     } else if (snapshot.hasData) {
                       return AnimatedBuilder(
                         animation: _routeAnimation,
                         builder: (context, child) {
-                          // Calculate how many points to show based on the animation (0.0 to 1.0)
+                          // Calculate how many points to show based
+                          // on the animation (0.0 to 1.0)
                           int pointCount =
                               (snapshot.data!.length * _routeAnimation.value)
                                   .ceil();
@@ -416,30 +476,18 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
 
                           return PolylineLayer(
                             polylines: [
-                              // A Polyline needs at least 2 points to be drawn on the canvas
+                              // A Polyline needs at least 2 points
+                              // to be drawn on the canvas
                               if (animatedPoints.length > 1)
                                 Polyline(
                                   points: animatedPoints,
                                   color: Colors.deepOrange,
-                                  strokeWidth:
-                                      4, // Slightly thicker looks better animated
+                                  strokeWidth: 4,
                                 ),
                             ],
                           );
                         },
                       );
-                      //   PolylineLayer(
-                      //   polylines: [
-                      //     Polyline(
-                      //       points: [
-                      //         for (var point in snapshot.data!)
-                      //           LatLng(point.latitude, point.longitude),
-                      //       ],
-                      //       color: Colors.deepOrange,
-                      //       strokeWidth: 3,
-                      //     ),
-                      //   ],
-                      // );
                     } else if (snapshot.hasError) {
                       // Handle any API errors gracefully
                       return Center(child: Text('Error loading route'));
@@ -459,61 +507,98 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
           ),
           // end of FlutterMap widget
           // box that displays name of tapped building
-          if (_isRouting)
-            Align(
-              alignment: AlignmentGeometry.topCenter,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Padding(
-                  padding: EdgeInsetsGeometry.all(10),
-                  child: Container(
-                    height: 50,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Color(0xFF003C71),
-                      borderRadius: BorderRadius.circular(5),
-                      boxShadow: [BoxShadow(blurRadius: 3)],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 16.0, right: 8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              _selectedBuilding!.name,
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                fontStyle: FontStyle.italic,
-                                color: Colors.white,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+          Align(
+            alignment: AlignmentGeometry.topCenter,
+            child: SlideTransition(
+              position: _nameBoxSlide,
+              child: Padding(
+                padding: EdgeInsetsGeometry.all(10),
+                child: Container(
+                  height: 50,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Color(0xFF003C71),
+                    borderRadius: BorderRadius.circular(5),
+                    boxShadow: [BoxShadow(blurRadius: 3)],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16.0, right: 8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _selectedBuilding?.name ?? "",
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.white,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          IconButton(
-                            onPressed: () {
-                              _selectionAnimationController.reverse().then((_) {
-                                // 2. Wait until the animation finishes, THEN clear the state
-                                if (mounted) {
-                                  setState(() {
-                                    _isRouting = false;
-                                    _selectedBuilding = null;
-                                    _routeFuture =
-                                        null; // Clear the drawn route line
-                                  });
-                                }
-                              });
-                            },
-                            icon: Icon(Icons.close, color: Colors.white),
-                          ),
-                        ],
-                      ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            _selectionAnimationController.reverse().then((_) {
+                              // 2. Wait until the animation finishes,
+                              // THEN clear the state
+                              if (mounted) {
+                                setState(() {
+                                  _isRouting = false;
+                                  _selectedBuilding = null;
+                                  _routeFuture =
+                                      null; // Clear the drawn route line
+                                });
+                              }
+                            });
+                          },
+                          icon: Icon(Icons.close, color: Colors.white),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
+          ),
+          // re-center button that allows the user to move the
+          // map's center to their current position
+          Align(
+            alignment: Alignment.bottomLeft,
+            child: SlideTransition(
+              position: _recenterButtonSlide,
+              child: Padding(
+                padding: EdgeInsetsGeometry.all(10),
+                child: InkWell(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: Size.fromRadius(25),
+                      shape: CircleBorder(),
+                      padding: EdgeInsetsGeometry.all(10),
+                      backgroundColor: Color(0xFF5B6770),
+                    ),
+                    // on press move the camera to the user's location
+                    onPressed: () {
+                      if (_currentPosition == null) return;
+                      _mapController.move(_currentPosition!, 17);
+
+                      setState(() {
+                        _cameraPosition = _currentPosition;
+                      });
+
+                      _checkIfCentered();
+                    },
+                    child: Icon(
+                      Icons.navigation_outlined,
+                      color: Colors.white,
+                      size: 25,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -524,6 +609,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   void dispose() {
     // dispose of position stream
     _selectionAnimationController.dispose();
+    _recenterAnimationController.dispose();
     _routeAnimationController.dispose();
     _positionStreamSubscription?.cancel();
     super.dispose();
@@ -552,10 +638,13 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
           setState(() {
             _currentPosition = LatLng(position.latitude, position.longitude);
           });
+
+          _checkIfCentered();
         });
   }
 
-  // _handlerPermission method that asks the user for permission to use location services
+  // _handlerPermission method that asks the user for
+  // permission to use location services
   Future<bool> _handlePermission() async {
     // permission variables
     bool serviceEnabled;
@@ -591,13 +680,33 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     return true;
   }
 
+  void _checkIfCentered() {
+    if (_currentPosition == null || _cameraPosition == null) return;
+
+    double distance = Geolocator.distanceBetween(
+      _currentPosition!.latitude,
+      _currentPosition!.longitude,
+      _cameraPosition!.latitude,
+      _cameraPosition!.longitude,
+    );
+
+    if (!_showAttribution && distance > 5) {
+      _recenterAnimationController.forward();
+    } else {
+      _recenterAnimationController.reverse();
+    }
+  }
+
   // fetchRoute method that performs HTTP request to generate polyline
   // and then decodes and returns it
   Future<List<PointLatLng>> fetchRoute(LatLng start, LatLng end) async {
     // make a api request
     final response = await http.get(
       Uri.parse(
-        'http://router.project-osrm.org/route/v1/foot/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=polyline&steps=true&generate_hints=false',
+        'http://router.project-osrm.org/route/v1/foot/'
+        '${start.longitude},${start.latitude};'
+        '${end.longitude},${end.latitude}?'
+        'overview=full&geometries=polyline&steps=true&generate_hints=false',
       ),
     );
 
