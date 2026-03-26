@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_compass/flutter_map_compass.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
@@ -186,6 +187,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   late Animation<Color?> _polygonColorAnimation;
   late Animation<double> _borderWidthAnimation;
   late Animation<Offset> _nameBoxSlide;
+  late Animation<Offset> _compassSlide;
 
   // recenter animations
   late AnimationController _recenterAnimationController;
@@ -239,7 +241,19 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
         ).animate(
           CurvedAnimation(
             parent: _selectionAnimationController,
-            curve: Curves.easeOutBack,
+            curve: Curves.easeInOut,
+          ),
+        );
+
+    // define the compass slide transition
+    _compassSlide =
+        Tween<Offset>(
+          begin: const Offset(0.0, 0.0),
+          end: const Offset(0.0, 2.0),
+        ).animate(
+          CurvedAnimation(
+            parent: _selectionAnimationController,
+            curve: Curves.easeInOut,
           ),
         );
 
@@ -257,7 +271,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
         ).animate(
           CurvedAnimation(
             parent: _recenterAnimationController,
-            curve: Curves.easeOutBack,
+            curve: Curves.easeInOut,
           ),
         );
 
@@ -274,11 +288,6 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
         curve: Curves.easeInOut,
       ),
     );
-
-    // trigger map rebuilds on every animation frame
-    _selectionAnimationController.addListener(() {
-      setState(() {});
-    });
   }
 
   // build method
@@ -360,30 +369,35 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               // to select the building that the user has tapped and set routing
               // as true.
               GestureDetector(
-                child: PolygonLayer(
-                  hitNotifier: _polygonHtNotifier,
-                  polygons: [
-                    for (var building in _buildings)
-                      Polygon<Building>(
-                        hitValue: building,
-                        points: building.polygon,
-                        // Conditionally change the color/opacity
-                        // if it's the selected building
-                        color:
-                            (_selectedBuilding?.name == building.name &&
-                                _isRouting)
-                            ? _polygonColorAnimation.value ??
-                                  Color(0xFF0077CA).withValues(alpha: 0.20)
-                            : Color(0xFF0077CA).withValues(alpha: 0.20),
-                        borderColor: Color(0xFF003C71),
-                        // Use the animated border width
-                        borderStrokeWidth:
-                            (_selectedBuilding?.name == building.name &&
-                                _isRouting)
-                            ? _borderWidthAnimation.value
-                            : 1.0,
-                      ),
-                  ],
+                child: AnimatedBuilder(
+                  animation: _selectionAnimationController,
+                  builder: (context, child) {
+                    return PolygonLayer(
+                      hitNotifier: _polygonHtNotifier,
+                      polygons: [
+                        for (var building in _buildings)
+                          Polygon<Building>(
+                            hitValue: building,
+                            points: building.polygon,
+                            // Conditionally change the color/opacity
+                            // if it's the selected building
+                            color:
+                                (_selectedBuilding?.name == building.name &&
+                                    _isRouting)
+                                ? _polygonColorAnimation.value ??
+                                      Color(0xFF0077CA).withValues(alpha: 0.20)
+                                : Color(0xFF0077CA).withValues(alpha: 0.20),
+                            borderColor: Color(0xFF003C71),
+                            // Use the animated border width
+                            borderStrokeWidth:
+                                (_selectedBuilding?.name == building.name &&
+                                    _isRouting)
+                                ? _borderWidthAnimation.value
+                                : 1.0,
+                          ),
+                      ],
+                    );
+                  },
                 ),
                 // on polygon tap set it as the selected building and play
                 // animation
@@ -396,19 +410,16 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                   if (tappedBuilding != null) {
                     if (tappedBuilding.name == _selectedBuilding?.name) {
                       // Tapping the same building: toggle routing and reverse animation
-                      if (_isRouting) {
-                        _selectionAnimationController.forward();
-                      } else {
-                        _selectionAnimationController.reverse().then((_) {
-                          if (mounted) {
-                            setState(() {
-                              _isRouting = false;
-                              _selectedBuilding = null;
-                              _routeFuture = null;
-                            });
-                          }
-                        });
-                      }
+                      _routeAnimationController.reverse();
+                      _selectionAnimationController.reverse().then((_) {
+                        if (mounted) {
+                          setState(() {
+                            _isRouting = false;
+                            _selectedBuilding = null;
+                            _routeFuture = null;
+                          });
+                        }
+                      });
                     } else {
                       // Tapping a new building
                       setState(() {
@@ -503,6 +514,16 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                     " OpenStreetRoutingMachine",
                   ),
                 ),
+              AnimatedBuilder(
+                animation: _compassSlide,
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Offset(0.0, _compassSlide.value.dy * 30.0),
+                    child: child,
+                  );
+                },
+                child: MapCompass.cupertino(animationCurve: Curves.easeInOut),
+              ),
             ],
           ),
           // end of FlutterMap widget
