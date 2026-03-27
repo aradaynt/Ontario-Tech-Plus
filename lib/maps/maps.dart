@@ -245,7 +245,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
           ),
         );
 
-    // define the compass slide transition
+    // define the compass slide transition so that it starts in its normal
+    // position and then slides down with the name box
     _compassSlide =
         Tween<Offset>(
           begin: const Offset(0.0, 0.0),
@@ -409,7 +410,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
 
                   if (tappedBuilding != null) {
                     if (tappedBuilding.name == _selectedBuilding?.name) {
-                      // Tapping the same building: toggle routing and reverse animation
+                      // Tapping the same building: toggle routing and reverse animations
                       _routeAnimationController.reverse();
                       _selectionAnimationController.reverse().then((_) {
                         if (mounted) {
@@ -514,6 +515,10 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                     " OpenStreetRoutingMachine",
                   ),
                 ),
+              // compass widget that always points north. the user can tap the
+              // compass in order to rotate the map so that the top of the
+              // screen points north. Animated so that it slides with the
+              // building name box. It is the topmost widget in the map
               AnimatedBuilder(
                 animation: _compassSlide,
                 builder: (context, child) {
