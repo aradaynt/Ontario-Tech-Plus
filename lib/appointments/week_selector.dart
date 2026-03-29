@@ -118,7 +118,7 @@ class _WeekSelectionState extends State<WeekSelection> {
                           }
                         });
                       },
-                      child: Container(
+                      child: SizedBox(
                         width: 160,
                         height: 75,
                         child: Card(

@@ -115,7 +115,7 @@ class MyCoursesPage extends ConsumerWidget {
                   // Render the course cards
                   return ListView.separated(
                     itemCount: courses.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, i) {
                       final course = courses[i];
 
