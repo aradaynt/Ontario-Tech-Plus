@@ -20,6 +20,7 @@ class appointments {
     required this.end,
     required this.who,
   });
+
   @override
   String toString() {
     DateFormat inputFormat = DateFormat("HH:mm:ss");
@@ -50,6 +51,16 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
   List<appointments> myAdvisorAppointments = [];
   List<appointments> myCourseAppointments = [];
   late Student student1 = widget.student;
+
+  // Tracks selected appointments for multi-delete
+  Set<appointments> selectedAppointments = {};
+
+  @override
+  void initState() {
+    super.initState();
+    fetchAdvisorAppointments();
+    fetchCourseAppointments();
+  }
 
   Future<void> fetchAdvisorAppointments() async {
     try {
@@ -126,50 +137,132 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    fetchAdvisorAppointments();
-    fetchCourseAppointments();
+  // Multi-delete method
+  Future<void> _deleteSelected() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Multiple"),
+        content: Text(
+          "Are you sure you want to cancel ${selectedAppointments.length} appointments?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("DELETE", style: TextStyle(color: Colors.red)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("CANCEL"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final toDelete = selectedAppointments.toList();
+
+    // Optimistic UI update
+    setState(() {
+      myAdvisorAppointments.removeWhere((a) => toDelete.contains(a));
+      myCourseAppointments.removeWhere((a) => toDelete.contains(a));
+      selectedAppointments.clear();
+    });
+
+    try {
+      // Loop through because they might belong to different tables
+      for (var appt in toDelete) {
+        await Supabase.instance.client
+            .from(appt.tableName)
+            .delete()
+            .eq('id', appt.id);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Appointments cancelled successfully.")),
+        );
+      }
+    } catch (e) {
+      print("Batch delete failed: $e");
+      fetchAdvisorAppointments();
+      fetchCourseAppointments();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to cancel some appointments.")),
+        );
+      }
+    }
+  }
+
+  void _toggleSelection(appointments appt) {
+    setState(() {
+      if (selectedAppointments.contains(appt)) {
+        selectedAppointments.remove(appt);
+      } else {
+        selectedAppointments.add(appt);
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final allAppointments = [...myAdvisorAppointments, ...myCourseAppointments];
     final colorScheme = Theme.of(context).colorScheme;
+    final isMultiSelectMode = selectedAppointments.isNotEmpty;
+
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: Text("Select a Time Slot")),
-        body: Center(child: CircularProgressIndicator()),
+        appBar: AppBar(title: const Text("My Appointments")),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
+
     return Scaffold(
-      appBar: AppBar(title: const Text("My Appointments")),
+      // Contextual AppBar
+      appBar: isMultiSelectMode
+          ? AppBar(
+              backgroundColor: colorScheme.primaryContainer,
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => setState(() => selectedAppointments.clear()),
+              ),
+              title: Text("${selectedAppointments.length} Selected"),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: _deleteSelected,
+                ),
+              ],
+            )
+          : AppBar(title: const Text("My Appointments")),
       body: SafeArea(
         child: Column(
           children: [
             const SizedBox(height: 10),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: SizedBox(
-                  width: 175,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        "Swipe to Cancel",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+            if (!isMultiSelectMode)
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: SizedBox(
+                    width: 175,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Swipe to Cancel",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      Icon(Icons.arrow_back),
-                    ],
+                        Icon(Icons.arrow_back),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.only(top: 8, right: 8),
@@ -186,14 +279,24 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
                     itemCount: allAppointments.length,
                     itemBuilder: (context, index) {
                       final appointment = allAppointments[index];
+                      final isSelected = selectedAppointments.contains(
+                        appointment,
+                      );
+
                       return Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
                         ),
                         child: Dismissible(
-                          key: UniqueKey(),
-                          direction: DismissDirection.endToStart,
+                          // Using tableName + id to guarantee uniqueness
+                          key: Key(
+                            '${appointment.tableName}_${appointment.id}',
+                          ),
+                          // Disable swipe when multi-selecting
+                          direction: isMultiSelectMode
+                              ? DismissDirection.none
+                              : DismissDirection.endToStart,
                           resizeDuration: null,
                           background: Container(
                             decoration: BoxDecoration(
@@ -236,9 +339,9 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
                           onDismissed: (direction) async {
                             setState(() {
                               if (appointment.tableName == 'advisor_booked') {
-                                myAdvisorAppointments.removeAt(index);
+                                myAdvisorAppointments.remove(appointment);
                               } else {
-                                myCourseAppointments.removeAt(index);
+                                myCourseAppointments.remove(appointment);
                               }
                             });
 
@@ -266,16 +369,54 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
                               );
                             }
                           },
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Text(
-                                  appointment.toString(),
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
+                          child: GestureDetector(
+                            // Long press and tap logic
+                            onLongPress: () {
+                              if (!isMultiSelectMode)
+                                _toggleSelection(appointment);
+                            },
+                            onTap: () {
+                              if (isMultiSelectMode)
+                                _toggleSelection(appointment);
+                            },
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: Card(
+                                color: isSelected
+                                    ? colorScheme.secondaryContainer
+                                    : null,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  side: isSelected
+                                      ? BorderSide(
+                                          color: colorScheme.primary,
+                                          width: 2,
+                                        )
+                                      : BorderSide.none,
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          appointment.toString(),
+                                          style: const TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      if (isMultiSelectMode)
+                                        Icon(
+                                          isSelected
+                                              ? Icons.check_circle
+                                              : Icons.radio_button_unchecked,
+                                          color: isSelected
+                                              ? colorScheme.primary
+                                              : Colors.grey,
+                                        ),
+                                    ],
                                   ),
                                 ),
                               ),
