@@ -368,6 +368,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                     if (mounted) {
                       setState(() {
                         _isRouting = false;
+                        _destinationMarker = null;
                         _selectedBuilding = null;
                         _routeFuture = null;
                       });
@@ -454,6 +455,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                         if (mounted) {
                           setState(() {
                             _isRouting = false;
+                            _destinationMarker = null;
                             _selectedBuilding = null;
                             _routeFuture = null;
                           });
@@ -634,6 +636,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                               if (mounted) {
                                 setState(() {
                                   _isRouting = false;
+                                  _destinationMarker = null;
                                   _selectedBuilding = null;
                                   _routeFuture =
                                       null; // Clear the drawn route line
@@ -732,6 +735,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                         setState(() {
                           _isNavigating = false;
                           _isRouting = false;
+                          _destinationMarker = null;
                         });
                       });
                     },
