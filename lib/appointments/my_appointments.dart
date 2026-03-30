@@ -51,8 +51,6 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
   List<appointments> myAdvisorAppointments = [];
   List<appointments> myCourseAppointments = [];
   late Student student1 = widget.student;
-
-  // Tracks selected appointments for multi-delete
   Set<appointments> selectedAppointments = {};
 
   @override
@@ -137,7 +135,6 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
     }
   }
 
-  // Multi-delete method
   Future<void> _deleteSelected() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -163,7 +160,6 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
 
     final toDelete = selectedAppointments.toList();
 
-    // Optimistic UI update
     setState(() {
       myAdvisorAppointments.removeWhere((a) => toDelete.contains(a));
       myCourseAppointments.removeWhere((a) => toDelete.contains(a));
@@ -171,7 +167,6 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
     });
 
     try {
-      // Loop through because they might belong to different tables
       for (var appt in toDelete) {
         await Supabase.instance.client
             .from(appt.tableName)
@@ -220,7 +215,6 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
     }
 
     return Scaffold(
-      // Contextual AppBar
       appBar: isMultiSelectMode
           ? AppBar(
               backgroundColor: colorScheme.primaryContainer,
@@ -289,11 +283,9 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
                           vertical: 8,
                         ),
                         child: Dismissible(
-                          // Using tableName + id to guarantee uniqueness
                           key: Key(
                             '${appointment.tableName}_${appointment.id}',
                           ),
-                          // Disable swipe when multi-selecting
                           direction: isMultiSelectMode
                               ? DismissDirection.none
                               : DismissDirection.endToStart,
@@ -370,7 +362,6 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
                             }
                           },
                           child: GestureDetector(
-                            // Long press and tap logic
                             onLongPress: () {
                               if (!isMultiSelectMode)
                                 _toggleSelection(appointment);
