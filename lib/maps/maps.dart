@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_compass/flutter_map_compass.dart';
+import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
@@ -182,12 +183,16 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     ]),
   ];
 
+  // marker
+  Marker? _destinationMarker;
+
   // selection animations
   late AnimationController _selectionAnimationController;
   late Animation<Color?> _polygonColorAnimation;
   late Animation<double> _borderWidthAnimation;
   late Animation<Offset> _nameBoxSlide;
   late Animation<Offset> _compassSlide;
+  late Animation<Offset> _navButtonSlide;
 
   // recenter animations
   late AnimationController _recenterAnimationController;
@@ -197,8 +202,13 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   late AnimationController _routeAnimationController;
   late Animation<double> _routeAnimation;
 
+  // begin navigation animation
+  late AnimationController _beginNavAnimationController;
+  late Animation<Offset> _closeButtonSlide;
+
   // boolean variables for program control
   bool _isRouting = false;
+  bool _isNavigating = false;
   bool _showAttribution = true;
 
   // initState
@@ -258,6 +268,19 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
           ),
         );
 
+    // define the nav button slide so that the start navigation button
+    // is off screen until a building is selected
+    _navButtonSlide =
+        Tween<Offset>(
+          begin: const Offset(0.0, 2.0),
+          end: const Offset(0.0, 0.0),
+        ).animate(
+          CurvedAnimation(
+            parent: _selectionAnimationController,
+            curve: Curves.easeInOut,
+          ),
+        );
+
     // animation controller for the recenter button
     _recenterAnimationController = AnimationController(
       vsync: this,
@@ -289,6 +312,24 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
         curve: Curves.easeInOut,
       ),
     );
+
+    // initialize the select animation controller
+    _beginNavAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    // define the end navigation button animation
+    _closeButtonSlide =
+        Tween<Offset>(
+          begin: const Offset(0.0, 2.0),
+          end: const Offset(0.0, 0.0),
+        ).animate(
+          CurvedAnimation(
+            parent: _beginNavAnimationController,
+            curve: Curves.easeInOut,
+          ),
+        );
   }
 
   // build method
@@ -311,9 +352,6 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               initialCenter: LatLng(43.945152871124854, -78.89684924186564),
               initialZoom: 16.5,
               initialRotation: 16.0,
-              interactionOptions: InteractionOptions(
-                flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
-              ),
               // onMapEvent used to detect when the user has interacted with the
               // map. Used to hide attribution on map interact as allowed under
               // OpenStreetMap Licencing and Attribution. Also detect if user
@@ -325,7 +363,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
 
                 // if currently routing allow user to cancel routing by
                 // tapping the map
-                if (event is MapEventTap && _isRouting) {
+                if (event is MapEventTap && _isRouting && !_isNavigating) {
                   _selectionAnimationController.reverse().then((_) {
                     if (mounted) {
                       setState(() {
@@ -426,6 +464,16 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                       setState(() {
                         _selectedBuilding = tappedBuilding;
                         _isRouting = true;
+                        _destinationMarker = Marker(
+                          point: _selectedBuilding!.centre,
+                          alignment: Alignment.center,
+                          rotate: true,
+                          child: Icon(
+                            Icons.location_pin,
+                            color: Color(0xFFE75D2A),
+                            size: 30,
+                          ),
+                        );
                         _mapController.move(_selectedBuilding!.centre, 16.5);
 
                         if (_currentPosition != null) {
@@ -450,17 +498,31 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                 },
               ),
               // the third layer is the MarkerLayer that is used to mark locations
-              // on the map with a widget. This is used to show the user's current
-              // location.
-              MarkerLayer(
-                markers: [
-                  if (_currentPosition != null)
-                    Marker(
-                      rotate: true,
-                      child: Icon(Icons.location_pin, color: Colors.redAccent),
-                      point: _currentPosition!,
-                    ),
-                ],
+              // on the map with a widget.
+              MarkerLayer(markers: [?_destinationMarker]),
+              // the fourth layer is the currentLocationLayer, that displays the
+              // users current location and the direction their device is
+              // pointing. Uses an alternate icon during navigation.
+              CurrentLocationLayer(
+                alignPositionOnUpdate: AlignOnUpdate.never,
+                alignDirectionOnUpdate: AlignOnUpdate.never,
+                style: LocationMarkerStyle(
+                  marker: _isNavigating
+                      ? DefaultLocationMarker(
+                          color: Colors.white,
+                          child: Icon(
+                            Icons.navigation_sharp,
+                            color: Color(0xFF0077CA),
+                            size: 20,
+                          ),
+                        )
+                      : DefaultLocationMarker(),
+                  markerAlignment: Alignment.center,
+                  markerDirection: MarkerDirection.heading,
+                  markerSize: _isNavigating
+                      ? const Size.square(25)
+                      : Size.square(20),
+                ),
               ),
               if (_isRouting && _routeFuture != null)
                 FutureBuilder<List<PointLatLng>>(
@@ -493,7 +555,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                               if (animatedPoints.length > 1)
                                 Polyline(
                                   points: animatedPoints,
-                                  color: Colors.deepOrange,
+                                  color: Color(0xFFE75D2A),
                                   strokeWidth: 4,
                                 ),
                             ],
@@ -625,10 +687,68 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               ),
             ),
           ),
+          // begin navigation button that starts the step by step navigation
+          SlideTransition(
+            position: _navButtonSlide,
+            child: Align(
+              alignment: AlignmentGeometry.bottomCenter,
+              child: Padding(
+                padding: EdgeInsetsGeometry.all(10),
+                child: ElevatedButton(
+                  onPressed: () {
+                    _beginNavAnimationController.forward();
+                    _selectionAnimationController.reverse();
+                    setState(() {
+                      _isNavigating = true;
+                    });
+                  },
+                  child: Text(
+                    "Begin Navigation",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // end navigation button that ends steps by step navigation
+          SlideTransition(
+            position: _closeButtonSlide,
+            child: Align(
+              alignment: AlignmentGeometry.bottomRight,
+              child: Padding(
+                padding: EdgeInsetsGeometry.all(10),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    onPressed: () {
+                      _beginNavAnimationController.reverse().then((_) {
+                        setState(() {
+                          _isNavigating = false;
+                          _isRouting = false;
+                        });
+                      });
+                    },
+                    icon: Icon(Icons.close),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // END OF BUILD METHOD
+  // ---------------------------------------------------------------------------
 
   // dispose
   @override
