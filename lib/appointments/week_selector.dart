@@ -48,7 +48,7 @@ class _WeekSelectionState extends State<WeekSelection> {
 
     List<DateTime> futureDates = [];
 
-    for (int i = 0; i < 13; i++) {
+    for (int i = 0; i < 18; i++) {
       DateTime currentWeekDate = firstOccurrence.add(Duration(days: i * 7));
 
       DateTime todayMidnight = DateTime(today.year, today.month, today.day);
