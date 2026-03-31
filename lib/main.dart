@@ -81,8 +81,8 @@ class MyApp extends ConsumerWidget {
             session != null ? const ShellPage() : const LoginPage(),
         loading: () =>
             const Scaffold(body: Center(child: CircularProgressIndicator())),
-        error: (_, __) =>
-            const Scaffold(body: Center(child: Text("Something went wrong"))),
+        error: (_, _) =>
+            const LoginPage(), // If theres some type of session error, just go to login page
       ),
     );
   }

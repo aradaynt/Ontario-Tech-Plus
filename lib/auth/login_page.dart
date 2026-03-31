@@ -5,6 +5,7 @@
 // UI can still use some work
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ontario_tech_plus/auth/auth_providers.dart';
@@ -25,6 +26,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _lastNameController = TextEditingController();
   final _studentNumberController = TextEditingController();
   final _programController = TextEditingController();
+  final _studentNumberFocusNode = FocusNode();
 
   String? _selectedFaculty;
   String? _selectedYear;
@@ -132,9 +134,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         }
       }
     } catch (e) {
+      // Handles errors on login
       setState(() {
-        _error = "Authentication failed. Please try again.";
-        //_error = e.toString();
+        _error = e is AuthFailure
+            ? e.message
+            : "Authentication failed. Please try again.";
       });
     } finally {
       if (mounted) {
@@ -185,6 +189,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     _lastNameController.dispose();
     _studentNumberController.dispose();
     _programController.dispose();
+    _studentNumberFocusNode.dispose();
     super.dispose();
   }
 
@@ -348,18 +353,47 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               const SizedBox(height: 16),
 
                               // Student number input field
-                              TextFormField(
-                                controller: _studentNumberController,
-                                decoration: _inputDecoration(
-                                  "Student Number",
-                                  icon: Icons.badge_outlined,
-                                ),
-                                style: const TextStyle(color: Colors.white),
-                                keyboardType: TextInputType.number,
-                                validator: _validateStudentNumber,
-                                textInputAction: TextInputAction.done,
-                                onFieldSubmitted: (_) {
-                                  if (!_loading) _submit(); // "Next"
+                              ListenableBuilder(
+                                listenable: Listenable.merge([
+                                  _studentNumberController,
+                                  _studentNumberFocusNode,
+                                ]),
+                                builder: (context, _) {
+                                  final showCount =
+                                      _studentNumberFocusNode.hasFocus;
+
+                                  return TextFormField(
+                                    controller: _studentNumberController,
+                                    focusNode: _studentNumberFocusNode,
+                                    decoration:
+                                        _inputDecoration(
+                                          "Student Number",
+                                          icon: Icons.badge_outlined,
+                                        ).copyWith(
+                                          counterText: '',
+                                          // Counter for the student number entry
+                                          suffixText: showCount
+                                              ? '${_studentNumberController.text.length}/9'
+                                              : null,
+                                          suffixStyle: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                    style: const TextStyle(color: Colors.white),
+                                    // Set keyboard type, and the max length
+                                    keyboardType: TextInputType.number,
+                                    maxLength: 9,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                      LengthLimitingTextInputFormatter(9),
+                                    ],
+                                    validator: _validateStudentNumber,
+                                    textInputAction: TextInputAction.done,
+                                    onFieldSubmitted: (_) {
+                                      if (!_loading) _submit(); // "Next"
+                                    },
+                                  );
                                 },
                               ),
                             ],
