@@ -52,7 +52,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   Building? _selectedBuilding;
 
   // future route
-  Future<List<PointLatLng>>? _routeFuture;
+  // Future<List<PointLatLng>>? _routeFuture;
+  Future<Map<String, dynamic>>? _routeFuture;
 
   // map buildings
   final List<Building> _buildings = [
@@ -527,7 +528,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                 ),
               ),
               if (_isRouting && _routeFuture != null)
-                FutureBuilder<List<PointLatLng>>(
+                FutureBuilder<Map<String, dynamic>>(
                   future: _routeFuture, // Use the stored future!
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
@@ -538,16 +539,27 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                       return AnimatedBuilder(
                         animation: _routeAnimation,
                         builder: (context, child) {
+                          List<LatLng> points = [];
+
+                          for (var point in snapshot.data!["points"]) {
+                            points.add(LatLng(point.latitude, point.longitude));
+                          }
+
+                          // List<LatLng> points =
+                          //     (snapshot.data!["points"] as List<PointLatLng>)
+                          //         .map<LatLng>(
+                          //           (item) =>
+                          //               LatLng(item.latitude, item.longitude),
+                          //         )
+                          //         .toList();
+
                           // Calculate how many points to show based
                           // on the animation (0.0 to 1.0)
                           int pointCount =
-                              (snapshot.data!.length * _routeAnimation.value)
-                                  .ceil();
+                              (points.length * _routeAnimation.value).ceil();
 
-                          // Grab only the visible points
-                          List<LatLng> animatedPoints = snapshot.data!
+                          List<LatLng> animatedPoints = points
                               .take(pointCount)
-                              .map((p) => LatLng(p.latitude, p.longitude))
                               .toList();
 
                           return PolylineLayer(
@@ -604,7 +616,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               child: Padding(
                 padding: EdgeInsetsGeometry.all(10),
                 child: Container(
-                  height: 50,
+                  height: 115,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: Color(0xFF003C71),
@@ -613,38 +625,79 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.only(left: 16.0, right: 8.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
                       children: [
-                        Expanded(
-                          child: Text(
-                            _selectedBuilding?.name ?? "",
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              fontStyle: FontStyle.italic,
-                              color: Colors.white,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _selectedBuilding?.name ?? "",
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            _selectionAnimationController.reverse().then((_) {
-                              // 2. Wait until the animation finishes,
-                              // THEN clear the state
-                              if (mounted) {
-                                setState(() {
-                                  _isRouting = false;
-                                  _destinationMarker = null;
-                                  _selectedBuilding = null;
-                                  _routeFuture =
-                                      null; // Clear the drawn route line
+                            IconButton(
+                              onPressed: () {
+                                _selectionAnimationController.reverse().then((
+                                  _,
+                                ) {
+                                  // 2. Wait until the animation finishes,
+                                  // THEN clear the state
+                                  if (mounted) {
+                                    setState(() {
+                                      _isRouting = false;
+                                      _destinationMarker = null;
+                                      _selectedBuilding = null;
+                                      _routeFuture =
+                                          null; // Clear the drawn route line
+                                    });
+                                  }
                                 });
-                              }
-                            });
-                          },
-                          icon: Icon(Icons.close, color: Colors.white),
+                              },
+                              icon: Icon(Icons.close, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            FutureBuilder<Map<String, dynamic>>(
+                              future: _routeFuture,
+                              builder: (context, snapshot) {
+                                if (snapshot.data != null) {
+                                  return Text(
+                                    "${_formatDuration(snapshot.data!["duration"])}\n${_formatDistance(snapshot.data!["distance"])}",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  );
+                                }
+                                return Text(
+                                  "loading...",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                );
+                              },
+                            ),
+                            SizedBox(width: 10),
+                            Text(
+                              "Placeholder for classes info",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -847,16 +900,58 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     }
   }
 
+  // helper method that formats a duration object into
+  // x days, y hours, z minutes format
+  String _formatDuration(Duration duration) {
+    StringBuffer output = StringBuffer();
+    print(duration);
+
+    if (duration.inDays != 0) {
+      output.write("${duration.inDays} Days");
+    }
+
+    if (duration.inHours != 0) {
+      if (output.isNotEmpty) {
+        output.write(", ");
+      }
+      output.write("${duration.inHours} Hours");
+    }
+
+    if (duration.inMinutes != 0) {
+      if (output.isNotEmpty) {
+        output.write(", ");
+      }
+      output.write("${duration.inMinutes} Minutes");
+    }
+
+    if (output.isEmpty && duration.inSeconds > 0) {
+      output.write("< 1 minute");
+    }
+
+    return output.toString();
+  }
+
+  String _formatDistance(double distance) {
+    int output = distance.round();
+
+    if (output >= 1000) {
+      return "${(output / 1000).toStringAsFixed(1)} km";
+    }
+
+    return "$output m";
+  }
+
   // fetchRoute method that performs HTTP request to generate polyline
   // and then decodes and returns it
-  Future<List<PointLatLng>> fetchRoute(LatLng start, LatLng end) async {
+  Future<Map<String, dynamic>> fetchRoute(LatLng start, LatLng end) async {
     // make a api request
     final response = await http.get(
       Uri.parse(
         'http://router.project-osrm.org/route/v1/foot/'
         '${start.longitude},${start.latitude};'
         '${end.longitude},${end.latitude}?'
-        'overview=full&geometries=polyline&steps=true&generate_hints=false',
+        'overview=full&geometries=polyline&steps=true&generate_hints=false'
+        '&distance=true&duration=true',
       ),
     );
 
@@ -869,8 +964,21 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
 
       String geometry = temp["routes"][0]["geometry"];
       List<PointLatLng> points = PolylinePoints.decodePolyline(geometry);
+      Duration duration = Duration(
+        seconds: (temp["routes"][0]["duration"] as double).round(),
+      );
+      double distance = temp["routes"][0]["distance"] as double;
+
+      print(distance);
+      print(duration);
+
+      Map<String, dynamic> routeInfo = {
+        "points": points,
+        "distance": distance,
+        "duration": duration,
+      };
       // return the list of points that make up the polyline
-      return points;
+      return routeInfo;
     } else {
       // If the server did not return a 200 OK response,
       // then throw an exception.
