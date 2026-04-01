@@ -1,7 +1,6 @@
 import 'package:encrypt/encrypt.dart' as encrypt;
 
 class QRCipher {
-  // Use a secure, 32-character key. In a production app, consider hiding this in your .env file
   static final _key = encrypt.Key.fromUtf8('my32lengthsupersecretnooneknows1'); 
   static final _iv = encrypt.IV.fromLength(16);
   static final _encrypter = encrypt.Encrypter(encrypt.AES(_key));
