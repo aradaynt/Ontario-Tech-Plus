@@ -14,6 +14,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'building.dart';
 
 // Maps Page widget
@@ -54,9 +55,12 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   // future route
   Future<List<PointLatLng>>? _routeFuture;
 
+  // list of user classes
+  final List<Map<String, dynamic>> _classList = [];
+
   // map buildings
   final List<Building> _buildings = [
-    Building("Sha building", LatLng(43.946213, -78.896540), [
+    Building("Shawenjigewining Hall", LatLng(43.946213, -78.896540), [
       LatLng(43.946327, -78.896870),
       LatLng(43.945917, -78.896679),
       LatLng(43.945979, -78.896406),
@@ -64,34 +68,36 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       LatLng(43.946077, -78.896205),
       LatLng(43.946444, -78.896371),
     ]),
-    Building("Energy Resource Center", LatLng(43.945639, -78.896306), [
-      LatLng(43.945795, -78.896671),
-      LatLng(43.945419, -78.896502),
-      LatLng(43.945537, -78.895960),
-      LatLng(43.945919, -78.896124),
-    ]),
-    Building("UB Building", LatLng(43.945189, -78.896076), [
-      LatLng(43.945287, -78.896438),
-      LatLng(43.944919, -78.896274),
-      LatLng(43.945042, -78.895749),
-      LatLng(43.945405, -78.895909),
-    ]),
-    Building("UA Building", LatLng(43.944527, -78.896433), [
+    Building("Science Building", LatLng(43.944527, -78.896433), [
       LatLng(43.944546, -78.897213),
       LatLng(43.944160, -78.896998),
       LatLng(43.944488, -78.895612),
       LatLng(43.944886, -78.895783),
     ]),
-    Building("Health And Recreation Center", LatLng(43.944029, -78.898629), [
-      LatLng(43.944318, -78.899168),
-      LatLng(43.943619, -78.898847),
-      LatLng(43.943795, -78.898098),
-      LatLng(43.944063, -78.898219),
-      LatLng(43.944077, -78.898157),
-      LatLng(43.944229, -78.898235),
-      LatLng(43.944220, -78.898273),
-      LatLng(43.944502, -78.898399),
+    Building("Business and IT Building", LatLng(43.945189, -78.896076), [
+      LatLng(43.945287, -78.896438),
+      LatLng(43.944919, -78.896274),
+      LatLng(43.945042, -78.895749),
+      LatLng(43.945405, -78.895909),
     ]),
+    Building("Energy Research Center", LatLng(43.945639, -78.896306), [
+      LatLng(43.945795, -78.896671),
+      LatLng(43.945419, -78.896502),
+      LatLng(43.945537, -78.895960),
+      LatLng(43.945919, -78.896124),
+    ]),
+    Building(
+      "Software and Informatics Research Centre",
+      LatLng(43.947811, -78.899104),
+      [
+        LatLng(43.947833, -78.899514),
+        LatLng(43.947626, -78.899434),
+        LatLng(43.947785, -78.898694),
+        LatLng(43.948047, -78.898798),
+        LatLng(43.947999, -78.899034),
+        LatLng(43.947937, -78.899010),
+      ],
+    ),
     Building("Library", LatLng(43.945898, -78.897307), [
       LatLng(43.945940, -78.897693),
       LatLng(43.945543, -78.897508),
@@ -148,13 +154,15 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       LatLng(43.943076, -78.898420),
       LatLng(43.943358, -78.898570),
     ]),
-    Building("SIRC", LatLng(43.947811, -78.899104), [
-      LatLng(43.947833, -78.899514),
-      LatLng(43.947626, -78.899434),
-      LatLng(43.947785, -78.898694),
-      LatLng(43.948047, -78.898798),
-      LatLng(43.947999, -78.899034),
-      LatLng(43.947937, -78.899010),
+    Building("Health And Recreation Center", LatLng(43.944029, -78.898629), [
+      LatLng(43.944318, -78.899168),
+      LatLng(43.943619, -78.898847),
+      LatLng(43.943795, -78.898098),
+      LatLng(43.944063, -78.898219),
+      LatLng(43.944077, -78.898157),
+      LatLng(43.944229, -78.898235),
+      LatLng(43.944220, -78.898273),
+      LatLng(43.944502, -78.898399),
     ]),
     Building("Campus Field House", LatLng(43.948580, -78.899142), [
       LatLng(43.948601, -78.899831),
@@ -191,7 +199,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   late Animation<Color?> _polygonColorAnimation;
   late Animation<double> _borderWidthAnimation;
   late Animation<Offset> _nameBoxSlide;
-  late Animation<Offset> _compassSlide;
+  late Animation<Offset> _onSelectDownSlide;
   late Animation<Offset> _navButtonSlide;
 
   // recenter animations
@@ -210,12 +218,65 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   bool _isRouting = false;
   bool _isNavigating = false;
   bool _showAttribution = true;
+  bool _isClassListVisible = false;
 
   // initState
   @override
   void initState() {
     super.initState();
     _setupLocation();
+
+    // fetch the users courses
+    _fetchClasses().then((data) {
+      _classList.clear();
+
+      // iterate over each course in response
+      for (var item in data) {
+        String name = item["course_sections"]["courses"]["course_name"];
+
+        // check if this course is already in our list
+        int existingIndex = _classList.indexWhere(
+          (element) => element["name"] == name,
+        );
+
+        Map<String, dynamic> classInfo;
+
+        // if it exists, grab a reference to it.
+        // If not, create it and add it to the list.
+        if (existingIndex >= 0) {
+          classInfo = _classList[existingIndex];
+        } else {
+          classInfo = {"name": name, "sections": []};
+          _classList.add(classInfo);
+        }
+
+        // append the schedule details to the correct course's sections list
+        for (var value in item["course_sections"]["course_schedule"]) {
+          // ensure rooms/building aren't null before accessing
+          String location = "TBD";
+          if (value["rooms"] != null && value["rooms"]["building"] != null) {
+            location =
+                "${value["rooms"]["building"]["shortname"]} ${value["rooms"]["room_code"]}";
+          }
+
+          // create map for the section
+          Map<String, String> section = {
+            "type": value["schedule_type"],
+            "day": value["day"],
+            "time":
+                "${value["start_time"].substring(0, 5)}-${value["end_time"].substring(0, 5)}",
+            "location": location,
+          };
+
+          // add section to the courses sections
+          classInfo["sections"].add(section);
+        }
+      }
+      // if the widget is mounted update the value
+      if (mounted) {
+        setState(() {});
+      }
+    });
 
     // initialize the select animation controller
     _selectionAnimationController = AnimationController(
@@ -257,7 +318,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
 
     // define the compass slide transition so that it starts in its normal
     // position and then slides down with the name box
-    _compassSlide =
+    _onSelectDownSlide =
         Tween<Offset>(
           begin: const Offset(0.0, 0.0),
           end: const Offset(0.0, 2.0),
@@ -409,6 +470,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               // to select the building that the user has tapped and set routing
               // as true.
               GestureDetector(
+                // on tap call _selectBuilding
+                onTap: _selectBuilding,
                 child: AnimatedBuilder(
                   animation: _selectionAnimationController,
                   builder: (context, child) {
@@ -439,65 +502,6 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                     );
                   },
                 ),
-                // on polygon tap set it as the selected building and play
-                // animation
-                onTap: () {
-                  Building? tappedBuilding =
-                      _polygonHtNotifier.value?.hitValues.isNotEmpty == true
-                      ? _polygonHtNotifier.value!.hitValues[0]
-                      : null;
-
-                  if (tappedBuilding != null) {
-                    if (tappedBuilding.name == _selectedBuilding?.name) {
-                      // Tapping the same building: toggle routing and reverse animations
-                      _routeAnimationController.reverse();
-                      _selectionAnimationController.reverse().then((_) {
-                        if (mounted) {
-                          setState(() {
-                            _isRouting = false;
-                            _destinationMarker = null;
-                            _selectedBuilding = null;
-                            _routeFuture = null;
-                          });
-                        }
-                      });
-                    } else {
-                      // Tapping a new building
-                      setState(() {
-                        _selectedBuilding = tappedBuilding;
-                        _isRouting = true;
-                        _destinationMarker = Marker(
-                          point: _selectedBuilding!.centre,
-                          alignment: Alignment.center,
-                          rotate: true,
-                          child: Icon(
-                            Icons.location_pin,
-                            color: Color(0xFFE75D2A),
-                            size: 30,
-                          ),
-                        );
-                        _mapController.move(_selectedBuilding!.centre, 16.5);
-
-                        if (_currentPosition != null) {
-                          _routeAnimationController.reset(); // Reset the line
-
-                          _routeFuture =
-                              fetchRoute(
-                                _currentPosition!,
-                                _selectedBuilding!.centre,
-                              )..then((_) {
-                                // Play the animation once the future completes
-                                if (mounted && _isRouting) {
-                                  _routeAnimationController.forward();
-                                }
-                              });
-                        }
-                      });
-
-                      _selectionAnimationController.forward(from: 0.0);
-                    }
-                  }
-                },
               ),
               // the third layer is the MarkerLayer that is used to mark locations
               // on the map with a widget.
@@ -584,10 +588,10 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               // screen points north. Animated so that it slides with the
               // building name box. It is the topmost widget in the map
               AnimatedBuilder(
-                animation: _compassSlide,
+                animation: _onSelectDownSlide,
                 builder: (context, child) {
                   return Transform.translate(
-                    offset: Offset(0.0, _compassSlide.value.dy * 30.0),
+                    offset: Offset(0.0, _onSelectDownSlide.value.dy * 30.0),
                     child: child,
                   );
                 },
@@ -745,6 +749,117 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               ),
             ),
           ),
+          Positioned(
+            top: 10,
+            left: 10,
+            // AnimatedBuilder uses _onSelectDownSlide to push the button down 60
+            // pixels when the building name box drops in from the top.
+            child: AnimatedBuilder(
+              animation: _onSelectDownSlide,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(0.0, _onSelectDownSlide.value.dy * 30.0),
+                  child: child,
+                );
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF003C71), // Matches your app's theme
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: const [
+                    BoxShadow(blurRadius: 3, color: Colors.black26),
+                  ],
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    _isClassListVisible ? Icons.close : Icons.menu,
+                    color: Colors.white,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isClassListVisible = !_isClassListVisible;
+                    });
+                  },
+                ),
+              ),
+            ),
+          ),
+          // Course List that displays the users courses
+          AnimatedPositioned(
+            curve: Curves.easeInOut,
+            top: 70,
+            bottom: 120,
+            left: _isClassListVisible ? 10 : -320,
+            duration: Duration(milliseconds: 300),
+            child: AnimatedBuilder(
+              animation: _onSelectDownSlide,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(0.0, _onSelectDownSlide.value.dy * 30.0),
+                  child: child,
+                );
+              },
+              child: Container(
+                width: 300,
+                padding: EdgeInsets.only(left: 10, top: 10, bottom: 10),
+                child: ListView.builder(
+                  itemCount: _classList.length,
+                  itemBuilder: (context, index1) {
+                    List<dynamic> sections = _classList[index1]["sections"];
+                    // display each class as a separate card
+                    return Card(
+                      child: Padding(
+                        padding: EdgeInsetsGeometry.all(10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(_classList[index1]["name"]),
+                            const Divider(),
+                            // display each courses sections as a list
+                            ListView.builder(
+                              physics: NeverScrollableScrollPhysics(),
+                              shrinkWrap: true,
+                              itemCount: sections.length,
+                              itemBuilder: (context, index2) {
+                                // wrap each section in an inkwell to allow for
+                                // interaction
+                                return InkWell(
+                                  // on tap select the building that that course
+                                  // takes place in
+                                  onTap: () {
+                                    String name = _convertShortNameToLongName(
+                                      sections[index2]["location"].split(
+                                        " ",
+                                      )[0],
+                                    );
+                                    for (var building in _buildings) {
+                                      if (building.name == name) {
+                                        _selectBuilding(buildingName: name);
+                                        setState(() {
+                                          _isClassListVisible = false;
+                                        });
+                                      }
+                                    }
+                                  },
+                                  // display section time and place
+                                  child: (Text(
+                                    "${sections[index2]["type"]}, "
+                                    "${sections[index2]["location"]}, "
+                                    "${sections[index2]["day"]} "
+                                    "${sections[index2]["time"]}",
+                                  )),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -830,6 +945,70 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     return true;
   }
 
+  // method that selects a building a user has tapped or
+  // selects the building that their course takes place in
+  void _selectBuilding({String? buildingName}) {
+    Building? tappedBuilding;
+    if (buildingName == null) {
+      tappedBuilding = _polygonHtNotifier.value?.hitValues.isNotEmpty == true
+          ? _polygonHtNotifier.value!.hitValues[0]
+          : null;
+    } else {
+      for (Building building in _buildings) {
+        if (building.name == buildingName) {
+          tappedBuilding = building;
+        }
+      }
+    }
+
+    if (tappedBuilding != null) {
+      if (tappedBuilding.name == _selectedBuilding?.name) {
+        // Tapping the same building: toggle routing and reverse animations
+        _routeAnimationController.reverse();
+        _selectionAnimationController.reverse().then((_) {
+          if (mounted) {
+            setState(() {
+              _isRouting = false;
+              _destinationMarker = null;
+              _selectedBuilding = null;
+              _routeFuture = null;
+            });
+          }
+        });
+      } else {
+        // Tapping a new building
+        setState(() {
+          _selectedBuilding = tappedBuilding;
+          _isRouting = true;
+          _destinationMarker = Marker(
+            point: _selectedBuilding!.centre,
+            alignment: Alignment.center,
+            rotate: true,
+            child: Icon(Icons.location_pin, color: Color(0xFFE75D2A), size: 30),
+          );
+          _mapController.move(_selectedBuilding!.centre, 16.5);
+
+          if (_currentPosition != null) {
+            _routeAnimationController.reset(); // Reset the line
+
+            _routeFuture =
+                fetchRoute(_currentPosition!, _selectedBuilding!.centre)
+                  ..then((_) {
+                    // Play the animation once the future completes
+                    if (mounted && _isRouting) {
+                      _routeAnimationController.forward();
+                    }
+                  });
+          }
+        });
+
+        _selectionAnimationController.forward(from: 0.0);
+      }
+    }
+  }
+
+  // helper method to check if the map is centered on the users
+  // current position
   void _checkIfCentered() {
     if (_currentPosition == null || _cameraPosition == null) return;
 
@@ -844,6 +1023,78 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       _recenterAnimationController.forward();
     } else {
       _recenterAnimationController.reverse();
+    }
+  }
+
+  // helper methods that converts the database's building
+  // short names to the corresponding long name
+  String _convertShortNameToLongName(String shrtName) {
+    if (shrtName == "SHA") {
+      return "Shawenjigewining Hall";
+    } else if (shrtName == "SCI") {
+      return "Science Building";
+    } else if (shrtName == "BUSI") {
+      return "Business and IT Building";
+    } else if (shrtName == "ERC") {
+      return "Energy Research Center";
+    } else if (shrtName == "SIR") {
+      return "Software and Informatics Research Centre";
+    } else if (shrtName == "LIB") {
+      return "Library";
+    } else if (shrtName == "ENG") {
+      return "OPG Engineering Building";
+    } else if (shrtName == "ACE") {
+      return "Automotive Center of Excellence";
+    } else if (shrtName == "U5") {
+      return "English Language Center";
+    } else if (shrtName == "SYN") {
+      return "Synchronous";
+    } else if (shrtName == "BOR") {
+      return "Bordessa Hall";
+    } else if (shrtName == "CHA") {
+      return "Charles Hall";
+    } else {
+      return "";
+    }
+  }
+
+  //
+  Future<List<Map<String, dynamic>>> _fetchClasses() async {
+    try {
+      // get user id
+      final userId = Supabase.instance.client.auth.currentUser!.id;
+
+      // make database query
+      final response = await Supabase.instance.client
+          .from('student_enrolled_sections')
+          .select('''
+          course_sections!inner (
+        courses!inner (
+          course_name,
+          term
+        ),
+        course_schedule (
+          schedule_type,
+          start_time,
+          end_time,
+          day,
+          rooms (
+            room_code,
+            building (
+              shortname
+            )
+          )
+        )
+      )
+    ''')
+          .eq('user_id', userId)
+          .eq('course_sections.courses.term', "Winter 2026");
+
+      // return the response
+      return response;
+    } catch (error) {
+      print("Error fetching class rooms: $error");
+      return [];
     }
   }
 
