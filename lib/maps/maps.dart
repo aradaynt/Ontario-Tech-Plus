@@ -494,7 +494,6 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                               });
                         }
                       });
-
                       _selectionAnimationController.forward(from: 0.0);
                     }
                   }
@@ -545,14 +544,6 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                             points.add(LatLng(point.latitude, point.longitude));
                           }
 
-                          // List<LatLng> points =
-                          //     (snapshot.data!["points"] as List<PointLatLng>)
-                          //         .map<LatLng>(
-                          //           (item) =>
-                          //               LatLng(item.latitude, item.longitude),
-                          //         )
-                          //         .toList();
-
                           // Calculate how many points to show based
                           // on the animation (0.0 to 1.0)
                           int pointCount =
@@ -599,7 +590,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                 animation: _compassSlide,
                 builder: (context, child) {
                   return Transform.translate(
-                    offset: Offset(0.0, _compassSlide.value.dy * 30.0),
+                    offset: Offset(0.0, _compassSlide.value.dy * 60.0),
                     child: child,
                   );
                 },
@@ -608,7 +599,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
             ],
           ),
           // end of FlutterMap widget
-          // box that displays name of tapped building
+          // box that displays name of tapped building and route info
           Align(
             alignment: AlignmentGeometry.topCenter,
             child: SlideTransition(
@@ -646,8 +637,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                                 _selectionAnimationController.reverse().then((
                                   _,
                                 ) {
-                                  // 2. Wait until the animation finishes,
-                                  // THEN clear the state
+                                  // ait until the animation finishes,
+                                  // then clear the state
                                   if (mounted) {
                                     setState(() {
                                       _isRouting = false;
@@ -663,6 +654,9 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                             ),
                           ],
                         ),
+                        // row that shows information about the rout (distance,
+                        // duration) and whether or not the user has any
+                        // classes in the building
                         Row(
                           children: [
                             FutureBuilder<Map<String, dynamic>>(
@@ -670,7 +664,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                               builder: (context, snapshot) {
                                 if (snapshot.data != null) {
                                   return Text(
-                                    "${_formatDuration(snapshot.data!["duration"])}\n${_formatDistance(snapshot.data!["distance"])}",
+                                    "${_formatDuration(snapshot.data!["duration"])}\n"
+                                    "${_formatDistance(snapshot.data!["distance"])}",
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 18,
@@ -678,6 +673,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                                     ),
                                   );
                                 }
+                                // while fetching the route display placeholder
+                                // text
                                 return Text(
                                   "loading...",
                                   style: TextStyle(
@@ -903,41 +900,66 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   // helper method that formats a duration object into
   // x days, y hours, z minutes format
   String _formatDuration(Duration duration) {
+    // create string buffer
     StringBuffer output = StringBuffer();
-    print(duration);
 
+    // check if the duration has days
     if (duration.inDays != 0) {
-      output.write("${duration.inDays} Days");
+      // if the amount of days is 1 use Day
+      // otherwise use Days
+      if (duration.inDays == 1) {
+        output.write("${duration.inDays} Day");
+      } else {
+        output.write("${duration.inDays} Days");
+      }
     }
 
+    // if the amount of days is 1 use Hour
+    // otherwise use Hours
     if (duration.inHours != 0) {
       if (output.isNotEmpty) {
         output.write(", ");
       }
-      output.write("${duration.inHours} Hours");
+      if (duration.inHours == 1) {
+        output.write("${duration.inHours} hour");
+      } else {
+        output.write("${duration.inHours} hours");
+      }
     }
 
+    // if the amount of days is 1 use Minute
+    // otherwise use Minutes
     if (duration.inMinutes != 0) {
       if (output.isNotEmpty) {
         output.write(", ");
       }
-      output.write("${duration.inMinutes} Minutes");
+      if (duration.inMinutes == 1) {
+        output.write("${duration.inMinutes} Minute");
+      } else {
+        output.write("${duration.inMinutes} Minutes");
+      }
     }
 
+    // if the duration of the route is less than 1 minute
     if (output.isEmpty && duration.inSeconds > 0) {
       output.write("< 1 minute");
     }
 
+    // return the output of the string buffer
     return output.toString();
   }
 
+  // helper method that formats the distance for printing
   String _formatDistance(double distance) {
+    // round the distance value
     int output = distance.round();
 
+    // if the amount of meters is over 1000 use kilometers
     if (output >= 1000) {
       return "${(output / 1000).toStringAsFixed(1)} km";
     }
 
+    // otherwise return distance in m
     return "$output m";
   }
 
@@ -950,8 +972,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
         'http://router.project-osrm.org/route/v1/foot/'
         '${start.longitude},${start.latitude};'
         '${end.longitude},${end.latitude}?'
-        'overview=full&geometries=polyline&steps=true&generate_hints=false'
-        '&distance=true&duration=true',
+        'overview=full&geometries=polyline&steps=true&generate_hints=false',
       ),
     );
 
@@ -962,6 +983,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       Map<String, dynamic> temp =
           jsonDecode(response.body) as Map<String, dynamic>;
 
+      // process relevant information
       String geometry = temp["routes"][0]["geometry"];
       List<PointLatLng> points = PolylinePoints.decodePolyline(geometry);
       Duration duration = Duration(
@@ -969,15 +991,14 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       );
       double distance = temp["routes"][0]["distance"] as double;
 
-      print(distance);
-      print(duration);
-
+      // create output map
       Map<String, dynamic> routeInfo = {
         "points": points,
         "distance": distance,
         "duration": duration,
       };
-      // return the list of points that make up the polyline
+
+      // return the route information
       return routeInfo;
     } else {
       // If the server did not return a 200 OK response,
