@@ -7,8 +7,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:ontario_tech_plus/auth/auth_providers.dart';
+import 'package:ontario_tech_plus/auth/bio_logic.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -27,6 +29,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _studentNumberController = TextEditingController();
   final _programController = TextEditingController();
   final _studentNumberFocusNode = FocusNode();
+
+  // Instantiated the biometric helper and secure storage
+  final BiometricHelper _biometricHelper = BiometricHelper();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   String? _selectedFaculty;
   String? _selectedYear;
@@ -112,6 +118,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           _passwordController.text.trim(),
         );
 
+        // Save credentials to secure storage for future biometric logins
+        await _secureStorage.write(key: 'saved_email', value: _emailController.text.trim());
+        await _secureStorage.write(key: 'saved_password', value: _passwordController.text.trim());
+
         // Handles signups
       } else {
         // step 1 simply proceeds to step two with no signup
@@ -146,6 +156,59 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           _loading = false;
         });
       }
+    }
+  }
+
+  // ====================== Biometric Login Handler ======================
+  Future<void> _handleBiometricLogin() async {
+    setState(() {
+      _error = null;
+      _loading = true;
+    });
+
+    // 1. Check if the user has logged in manually on this device before
+    final savedEmail = await _secureStorage.read(key: 'saved_email');
+    final savedPassword = await _secureStorage.read(key: 'saved_password');
+
+    if (savedEmail == null || savedPassword == null) {
+      setState(() {
+        _error = "No account linked. Please log in with your email and password first to enable biometrics.";
+        _loading = false;
+      });
+      return; 
+    }
+
+    // 2. Trigger the native Android fingerprint/face scanner
+    final bool isAuthenticated = await _biometricHelper.authenticate();
+
+    if (isAuthenticated) {
+      // 3. Scan was successful! Log them into Supabase using the saved credentials.
+      try {
+        final auth = ref.read(authServiceProvider);
+        await auth.signIn(savedEmail, savedPassword);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Biometric login successful!"),
+              backgroundColor: Color.fromARGB(255, 58, 70, 176),
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
+        
+      } catch (e) {
+        setState(() {
+          _error = "Saved credentials expired or invalid. Please log in manually.";
+          _loading = false;
+        });
+      }
+    } else {
+      // FAILED OR CANCELED SCAN
+      setState(() {
+        _error = "Biometric authentication failed or was canceled.";
+        _loading = false;
+      });
     }
   }
 
@@ -510,6 +573,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   : Text(buttonText),
                             ),
                           ),
+
+                          // ==========================================
+                          // BIOMETRIC LOGIN BUTTON
+                          // ==========================================
+                          if (_isLogin) ...[
+                            const SizedBox(height: 16),
+                            IconButton(
+                              onPressed: _loading ? null : _handleBiometricLogin,
+                              icon: const Icon(
+                                Icons.fingerprint,
+                                size: 50,
+                                color: Colors.white,
+                              ),
+                              tooltip: 'Login with Biometrics',
+                            ),
+                            const Text(
+                              "Tap to use Fingerprint/Face ID",
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
 
                           const SizedBox(height: 12),
 
