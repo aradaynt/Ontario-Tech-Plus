@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:home_widget/home_widget.dart';
+import 'package:ontario_tech_plus/core/widget_manager.dart';
 
 // Pages
 import 'package:ontario_tech_plus/home/settings_page.dart';
@@ -20,6 +22,13 @@ import 'package:ontario_tech_plus/schedule/courses/drop_course_page.dart';
 import 'package:ontario_tech_plus/shell_page.dart'; // Shell for bottom navigation
 import 'package:ontario_tech_plus/theme/theme_provider.dart'; // Riverpod theme provider
 
+@pragma('vm:entry-point')
+Future<void> interactiveCallback(Uri? data) async {
+  if (data?.host == 'updatewidget') {
+    await WidgetManager.updateNextClassWidget();
+  }
+}
+
 Future<void> main() async {
   // Ensure Flutter bindings are ready before async initialization.
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +41,12 @@ Future<void> main() async {
     url: dotenv.env['SUPABASE_URL'] ?? '',
     anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
   );
+
+  // Register background callback for HomeWidget
+  HomeWidget.registerInteractivityCallback(interactiveCallback);
+
+  // Update widget immediately on startup
+  await WidgetManager.updateNextClassWidget();
 
   // ProviderScope is required for Riverpod providers.
   runApp(const ProviderScope(child: MyApp()));

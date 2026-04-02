@@ -11,6 +11,7 @@ import 'package:ontario_tech_plus/core/global_providers/user_provider.dart';
 import 'package:ontario_tech_plus/schedule/courses/models/course_section_model.dart';
 import 'package:ontario_tech_plus/schedule/courses/models/enrolled_courses_model.dart';
 import 'package:ontario_tech_plus/schedule/courses/models/course_model.dart';
+import 'package:ontario_tech_plus/core/widget_manager.dart';
 
 // Stores currently selectedsubject filter for all courses
 final courseSubjectFilterProvider =
@@ -199,6 +200,9 @@ class SectionEnrollmentService {
 
     // Invalidate the enrolled courses provider to cause my courses to refresh (and drop course)
     ref.invalidate(myEnrolledCoursesProvider);
+
+    // Update the home widget
+    await WidgetManager.updateNextClassWidget();
   }
 }
 
@@ -384,6 +388,9 @@ class DropCourseService {
 
     // invalidate the only enrolled courses
     ref.invalidate(myEnrolledCoursesProvider);
+
+    // Update the home widget
+    await WidgetManager.updateNextClassWidget();
   }
 }
 
