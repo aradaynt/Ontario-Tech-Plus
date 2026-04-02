@@ -11,6 +11,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_compass/flutter_map_compass.dart';
 import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:http/http.dart' as http;
@@ -57,7 +58,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   Future<Map<String, dynamic>>? _routeFuture;
 
   // list of user classes
-  final List<Map<String, dynamic>> _classList = [];
+  List<Map<String, dynamic>> _classList = [];
 
   // map buildings
   final List<Building> _buildings = [
@@ -221,63 +222,38 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   bool _showAttribution = true;
   bool _isClassListVisible = false;
 
+  // enrolment table subscription
+  RealtimeChannel? _enrollmentSubscription;
+
   // initState
   @override
   void initState() {
     super.initState();
     _setupLocation();
 
-    // fetch the users courses
-    _fetchClasses().then((data) {
-      _classList.clear();
+    _fetchAndParseClasses();
 
-      // iterate over each course in response
-      for (var item in data) {
-        String name = item["course_sections"]["courses"]["course_name"];
-
-        // check if this course is already in our list
-        int existingIndex = _classList.indexWhere(
-          (element) => element["name"] == name,
-        );
-
-        Map<String, dynamic> classInfo;
-
-        // if it exists, grab a reference to it.
-        // If not, create it and add it to the list.
-        if (existingIndex >= 0) {
-          classInfo = _classList[existingIndex];
-        } else {
-          classInfo = {"name": name, "sections": []};
-          _classList.add(classInfo);
-        }
-
-        // append the schedule details to the correct course's sections list
-        for (var value in item["course_sections"]["course_schedule"]) {
-          // ensure rooms/building aren't null before accessing
-          String location = "TBD";
-          if (value["rooms"] != null && value["rooms"]["building"] != null) {
-            location =
-                "${value["rooms"]["building"]["shortname"]} ${value["rooms"]["room_code"]}";
-          }
-
-          // create map for the section
-          Map<String, String> section = {
-            "type": value["schedule_type"],
-            "day": value["day"],
-            "time":
-                "${value["start_time"].substring(0, 5)}-${value["end_time"].substring(0, 5)}",
-            "location": location,
-          };
-
-          // add section to the courses sections
-          classInfo["sections"].add(section);
-        }
-      }
-      // if the widget is mounted update the value
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId != null) {
+      _enrollmentSubscription = Supabase.instance.client
+          .channel('public:student_enrolled_sections')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            // Listens to INSERT, UPDATE, DELETE
+            schema: 'public',
+            table: 'student_enrolled_sections',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'user_id',
+              value: userId,
+            ),
+            callback: (payload) {
+              print('Detected change in courses, refreshing list...');
+              _fetchAndParseClasses();
+            },
+          )
+          .subscribe();
+    }
 
     // initialize the select animation controller
     _selectionAnimationController = AnimationController(
@@ -421,6 +397,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               onMapEvent: (event) {
                 if (event.runtimeType != MapEventNonRotatedSizeChange) {
                   _showAttribution = false;
+                  _isClassListVisible = false;
+                  _fetchAndParseClasses();
                 }
 
                 // if currently routing allow user to cancel routing by
@@ -810,7 +788,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               animation: _onSelectDownSlide,
               builder: (context, child) {
                 return Transform.translate(
-                  offset: Offset(0.0, _onSelectDownSlide.value.dy * 30.0),
+                  offset: Offset(0.0, _onSelectDownSlide.value.dy * 60.0),
                   child: child,
                 );
               },
@@ -829,6 +807,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                   ),
                   onPressed: () {
                     setState(() {
+                      // on-press update the course list
+                      _fetchAndParseClasses();
                       _isClassListVisible = !_isClassListVisible;
                     });
                   },
@@ -847,7 +827,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               animation: _onSelectDownSlide,
               builder: (context, child) {
                 return Transform.translate(
-                  offset: Offset(0.0, _onSelectDownSlide.value.dy * 30.0),
+                  offset: Offset(0.0, _onSelectDownSlide.value.dy * 50.0),
                   child: child,
                 );
               },
@@ -889,6 +869,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                                         _selectBuilding(buildingName: name);
                                         setState(() {
                                           _isClassListVisible = false;
+                                          _fetchAndParseClasses();
                                         });
                                       }
                                     }
@@ -924,10 +905,12 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   // dispose
   @override
   void dispose() {
+    _enrollmentSubscription?.unsubscribe();
     // dispose of position stream
     _selectionAnimationController.dispose();
     _recenterAnimationController.dispose();
     _routeAnimationController.dispose();
+    _beginNavAnimationController.dispose();
     _positionStreamSubscription?.cancel();
     super.dispose();
   }
@@ -1078,75 +1061,75 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     }
   }
 
+  List<String> _classesInBuilding() {
+    // 1. Fix the empty state return
+    if (_selectedBuilding == null) {
+      return [];
+    }
+
+    String buildingName = _selectedBuilding!.name;
+    List<String> sectionsInBuilding = [];
+
+    // Get the current day of the week (e.g., "Monday", "Tuesday")
+    String currentDay = DateFormat('EEEE').format(DateTime.now());
+
+    for (var course in _classList) {
+      for (var section in course["sections"]) {
+        String locationString = section["location"] ?? "";
+
+        // Extract short name safely
+        String shortName = locationString.isNotEmpty
+            ? locationString.split(" ")[0]
+            : "";
+
+        // 2. Filter by building AND the current day of the week
+        if (_convertShortNameToLongName(shortName) == buildingName &&
+            section["day"] == currentDay) {
+          // 3. Include the full location (which contains the room number) in the UI display
+          sectionsInBuilding.add(
+            "${course["name"]} - ${section["location"]}, ${section["time"]}",
+          );
+        }
+      }
+    }
+
+    // Optional: Add a fallback message if no classes are scheduled there today
+    if (sectionsInBuilding.isEmpty) {
+      return ["No classes here today"];
+    }
+
+    return sectionsInBuilding;
+  }
+
   // helper methods that converts the database's building
   // short names to the corresponding long name
-  String _convertShortNameToLongName(String shrtName) {
-    if (shrtName == "SHA") {
+  String _convertShortNameToLongName(String shortName) {
+    if (shortName == "SHA") {
       return "Shawenjigewining Hall";
-    } else if (shrtName == "SCI") {
+    } else if (shortName == "SCI") {
       return "Science Building";
-    } else if (shrtName == "BUSI") {
+    } else if (shortName == "BUSI") {
       return "Business and IT Building";
-    } else if (shrtName == "ERC") {
+    } else if (shortName == "ERC") {
       return "Energy Research Center";
-    } else if (shrtName == "SIR") {
+    } else if (shortName == "SIR") {
       return "Software and Informatics Research Centre";
-    } else if (shrtName == "LIB") {
+    } else if (shortName == "LIB") {
       return "Library";
-    } else if (shrtName == "ENG") {
+    } else if (shortName == "ENG") {
       return "OPG Engineering Building";
-    } else if (shrtName == "ACE") {
+    } else if (shortName == "ACE") {
       return "Automotive Center of Excellence";
-    } else if (shrtName == "U5") {
+    } else if (shortName == "U5") {
       return "English Language Center";
-    } else if (shrtName == "SYN") {
+    } else if (shortName == "SYN") {
       return "Synchronous";
-    } else if (shrtName == "BOR") {
+    } else if (shortName == "BOR") {
       return "Bordessa Hall";
-    } else if (shrtName == "CHA") {
+    } else if (shortName == "CHA") {
       return "Charles Hall";
     } else {
       return "";
-    }
-  }
-
-  //
-  Future<List<Map<String, dynamic>>> _fetchClasses() async {
-    try {
-      // get user id
-      final userId = Supabase.instance.client.auth.currentUser!.id;
-
-      // make database query
-      final response = await Supabase.instance.client
-          .from('student_enrolled_sections')
-          .select('''
-          course_sections!inner (
-        courses!inner (
-          course_name,
-          term
-        ),
-        course_schedule (
-          schedule_type,
-          start_time,
-          end_time,
-          day,
-          rooms (
-            room_code,
-            building (
-              shortname
-            )
-          )
-        )
-      )
-    ''')
-          .eq('user_id', userId)
-          .eq('course_sections.courses.term', "Winter 2026");
-
-      // return the response
-      return response;
-    } catch (error) {
-      print("Error fetching class rooms: $error");
-      return [];
     }
   }
 
@@ -1216,6 +1199,94 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     return "$output m";
   }
 
+  // fetch the user's currently enrolled classes in the current semester
+  Future<List<Map<String, dynamic>>> _fetchClasses() async {
+    try {
+      // get user id
+      final userId = Supabase.instance.client.auth.currentUser!.id;
+
+      // make database query
+      final response = await Supabase.instance.client
+          .from('student_enrolled_sections')
+          .select('''
+          course_sections!inner (
+        courses!inner (
+          course_name,
+          term
+        ),
+        course_schedule (
+          schedule_type,
+          start_time,
+          end_time,
+          day,
+          rooms (
+            room_code,
+            building (
+              shortname
+            )
+          )
+        )
+      )
+    ''')
+          .eq('user_id', userId)
+          .eq('course_sections.courses.term', "Winter 2026");
+
+      // return the response
+      return response;
+    } catch (error) {
+      print("Error fetching class rooms: $error");
+      return [];
+    }
+  }
+
+  Future<void> _fetchAndParseClasses() async {
+    final data = await _fetchClasses();
+
+    // Safety check in case the widget is destroyed before data returns
+    if (!mounted) return;
+
+    List<Map<String, dynamic>> newList = [];
+
+    for (var item in data) {
+      String name = item["course_sections"]["courses"]["course_name"];
+
+      int existingIndex = newList.indexWhere(
+        (element) => element["name"] == name,
+      );
+
+      Map<String, dynamic> classInfo;
+
+      if (existingIndex >= 0) {
+        classInfo = newList[existingIndex];
+      } else {
+        classInfo = {"name": name, "sections": []};
+        newList.add(classInfo);
+      }
+
+      for (var value in item["course_sections"]["course_schedule"]) {
+        String location = "TBD";
+        if (value["rooms"] != null && value["rooms"]["building"] != null) {
+          location =
+              "${value["rooms"]["building"]["shortname"]} ${value["rooms"]["room_code"]}";
+        }
+
+        Map<String, String> section = {
+          "type": value["schedule_type"],
+          "day": value["day"],
+          "time": "${value["start_time"]}-${value["end_time"]}",
+          "location": location,
+        };
+
+        classInfo["sections"].add(section);
+      }
+    }
+
+    // Trigger a UI rebuild with the fresh data
+    setState(() {
+      _classList = newList;
+    });
+  }
+
   // fetchRoute method that performs HTTP request to generate polyline
   // and then decodes and returns it
   Future<Map<String, dynamic>> fetchRoute(LatLng start, LatLng end) async {
@@ -1239,16 +1310,26 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       // process relevant information
       String geometry = temp["routes"][0]["geometry"];
       List<PointLatLng> points = PolylinePoints.decodePolyline(geometry);
-      Duration duration = Duration(
-        seconds: (temp["routes"][0]["duration"] as double).round(),
-      );
-      double distance = temp["routes"][0]["distance"] as double;
+
+      int duration = 0;
+      double distance = 0.0;
+
+      if (temp["routes"][0]["duration"] is int) {
+        duration = temp["routes"][0]["duration"];
+      } else {
+        duration = temp["routes"][0]["duration"].round();
+      }
+      if (temp["routes"][0]["distance"] is int) {
+        distance = temp["routes"][0]["distance"].toDouble();
+      } else {
+        distance = temp["routes"][0]["distance"];
+      }
 
       // create output map
       Map<String, dynamic> routeInfo = {
         "points": points,
         "distance": distance,
-        "duration": duration,
+        "duration": Duration(seconds: duration),
       };
 
       // return the route information
