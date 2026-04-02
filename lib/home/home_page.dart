@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:ontario_tech_plus/auth/auth_providers.dart';
 import 'package:ontario_tech_plus/profile/profile_provider.dart';
 
 class HomePage extends ConsumerWidget {
@@ -36,7 +37,7 @@ class HomePage extends ConsumerWidget {
       data: (profile) {
         // If no profile data found
         if (profile == null) {
-          return const Scaffold(body: Center(child: Text("No profile found")));
+          return const _MissingProfileScaffold();
         }
 
         // ================== Build the page ======================
@@ -119,6 +120,67 @@ class HomePage extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// Used to handle a situation where a user logs in but their profile data is missing, causing error
+// Now displays an error message, and allows them to logout
+class _MissingProfileScaffold extends ConsumerStatefulWidget {
+  const _MissingProfileScaffold();
+
+  @override
+  ConsumerState<_MissingProfileScaffold> createState() =>
+      _MissingProfileScaffoldState();
+}
+
+class _MissingProfileScaffoldState
+    extends ConsumerState<_MissingProfileScaffold> {
+  bool _isSigningOut = false;
+
+  // Allow the user to leave the broken account state safely by signing out
+  Future<void> _signOut() async {
+    setState(() => _isSigningOut = true);
+
+    try {
+      await ref.read(authServiceProvider).signOut();
+    } finally {
+      if (mounted) {
+        setState(() => _isSigningOut = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                // Error displayed
+                'There seems an issue with your account.\nPlease contact administration.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _isSigningOut ? null : _signOut,
+                child: _isSigningOut
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Logout'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

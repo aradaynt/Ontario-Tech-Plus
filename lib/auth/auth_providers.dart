@@ -36,7 +36,16 @@ final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService(supabase);
 });
 
-enum AuthAction { signIn, signUp, signOut }
+// Stores a one time success message after a successful password change on the login page
+final authStatusMessageProvider =
+    NotifierProvider<AuthStatusMessageNotifier, String?>(
+      AuthStatusMessageNotifier.new,
+    );
+
+// Redirect URL for password reset
+const passwordResetRedirectUri = 'ontariotechplus://password-reset';
+
+enum AuthAction { signIn, signUp, signOut, resetPassword, updatePassword }
 
 class AuthFailure implements Exception {
   final String message;
@@ -45,6 +54,20 @@ class AuthFailure implements Exception {
 
   @override
   String toString() => message;
+}
+
+// Stores one-time auth messages. ex. password reset success
+class AuthStatusMessageNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void setMessage(String? message) {
+    state = message;
+  }
+
+  void clear() {
+    state = null;
+  }
 }
 
 // Handles anyhthing related to authentication (signup, signin, signout)
@@ -115,6 +138,27 @@ class AuthService {
       await _supabase.auth.signOut();
     } catch (error) {
       throw _mapAuthError(error, action: AuthAction.signOut);
+    }
+  }
+
+  // Sends a password reset email if the account exists.
+  Future<void> resetPassword(String email) async {
+    try {
+      await _supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo: passwordResetRedirectUri,
+      );
+    } catch (error) {
+      throw _mapAuthError(error, action: AuthAction.resetPassword);
+    }
+  }
+
+  // Updates the current users password during recovery.
+  Future<void> updatePassword(String password) async {
+    try {
+      await _supabase.auth.updateUser(UserAttributes(password: password));
+    } catch (error) {
+      throw _mapAuthError(error, action: AuthAction.updatePassword);
     }
   }
 
@@ -233,6 +277,10 @@ class AuthService {
         return 'Sign up could not be completed. Please try again.';
       case AuthAction.signOut:
         return 'Sign out failed. Please try again.';
+      case AuthAction.resetPassword:
+        return 'Password reset could not be requested. Please try again.';
+      case AuthAction.updatePassword:
+        return 'Password could not be updated. Please try again.';
     }
   }
 

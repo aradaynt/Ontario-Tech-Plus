@@ -1,6 +1,8 @@
 // OntarioTechPlus - main.dart
 // NOTE: You must have a `.env` file in the project root.
 // Initializes the app and Supabase using values from `.env`.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -13,6 +15,7 @@ import 'package:ontario_tech_plus/home/settings_page.dart';
 import 'package:ontario_tech_plus/recs(ml)/reccomendation_pages.dart';
 import 'package:ontario_tech_plus/auth/login_page.dart';
 import 'package:ontario_tech_plus/auth/auth_providers.dart';
+import 'package:ontario_tech_plus/auth/password_reset_entry_page.dart';
 import 'package:ontario_tech_plus/profile/profile_page.dart';
 import 'package:ontario_tech_plus/schedule/courses/my_courses_page.dart';
 import 'package:ontario_tech_plus/schedule/courses/course_management_page.dart';
@@ -28,6 +31,9 @@ Future<void> interactiveCallback(Uri? data) async {
     await WidgetManager.updateNextClassWidget();
   }
 }
+
+// Global navigator key used to open pages outside normal context (Password reset entry)
+final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   // Ensure Flutter bindings are ready before async initialization.
@@ -52,11 +58,51 @@ Future<void> main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+// This actively listens for the password reset email call back link, and will direct to password reset entry page
+class _MyAppState extends ConsumerState<MyApp> {
+  StreamSubscription<AuthState>? _authSubscription;
+  bool _passwordRecoveryRouteOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Subscribe to lsiten for change
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
+      data,
+    ) {
+      if (data.event == AuthChangeEvent.passwordRecovery &&
+          !_passwordRecoveryRouteOpen) {
+        _passwordRecoveryRouteOpen = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          // Route to the password reset entry page
+          rootNavigatorKey.currentState?.pushNamed('/password_reset_entry');
+        });
+      }
+
+      if (data.event == AuthChangeEvent.signedOut ||
+          data.event == AuthChangeEvent.userUpdated) {
+        _passwordRecoveryRouteOpen = false;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     // Watch auth state to decide whether to show shell or login page.
     final authState = ref.watch(authStateProvider);
     // Watch current app theme mode and computed ThemeData.
@@ -64,6 +110,7 @@ class MyApp extends ConsumerWidget {
     final themeData = ref.watch(themeProvider.notifier).themeData;
 
     return MaterialApp(
+      navigatorKey: rootNavigatorKey,
       // App title
       title: 'Ontario Tech Plus',
       // Active app theme from Riverpod theme provider.
@@ -88,6 +135,7 @@ class MyApp extends ConsumerWidget {
         '/recommendations': (_) => const RecommendationPage(),
         '/schedule': (_) => const ViewMySchedulePage(),
         '/settings': (_) => const SettingsPage(),
+        '/password_reset_entry': (_) => const PasswordResetEntryPage(),
       },
 
       // Routing based on Supabase auth session state.
