@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ontario_tech_plus/auth/auth_providers.dart';
 import 'package:ontario_tech_plus/profile/profile_model.dart';
 import 'package:ontario_tech_plus/profile/profile_provider.dart';
+import 'package:ontario_tech_plus/profile/student_card_widget.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -262,13 +263,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
         const SizedBox(height: 12),
 
-        // Change email button below card
+        // Student card button
         OutlinedButton.icon(
-          onPressed: () {
-            _snack("Change email coming soon!");
-          },
-          icon: const Icon(Icons.email_outlined),
-          label: const Text("Change Email"),
+          onPressed: () => _showStudentCardDialog(profile),
+          icon: const Icon(Icons.badge_outlined),
+          label: const Text("Display Student Card"),
         ),
 
         // Sign out button
@@ -529,6 +528,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         keyboardType: keyboardType,
         decoration: InputDecoration(isDense: true, helperText: helperText),
       ),
+    );
+  }
+
+  // Display for student card using the student_card_widget
+  Future<void> _showStudentCardDialog(Profile profile) {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => StudentCardDialog(profile: profile),
     );
   }
 

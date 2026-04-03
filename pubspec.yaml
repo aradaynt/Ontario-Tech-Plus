@@ -81,6 +81,7 @@ flutter:
     - assets/backgrounds/LoginBackground.png
     - assets/backgrounds/LoginBackground2.png
     - assets/logos/ModifiedOntarioTechLogo.png
+    - assets/studentPhotos/sampleStudentPhoto.jpg
 
 flutter_launcher_icons:
   android: true
