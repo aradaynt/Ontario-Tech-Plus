@@ -681,13 +681,35 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                                 );
                               },
                             ),
-                            SizedBox(width: 10),
-                            Text(
-                              "Placeholder for classes info",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontStyle: FontStyle.italic,
+                            SizedBox(width: 15),
+                            Expanded(
+                              child: Builder(
+                                builder: (context) {
+                                  // Fetch the list once per build to improve performance
+                                  final classList = _classesInBuilding();
+
+                                  return ListView.builder(
+                                    padding: EdgeInsets
+                                        .zero, // Removes default list padding
+                                    shrinkWrap: true,
+                                    itemCount: classList.length,
+                                    itemBuilder: (context, index) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 4.0,
+                                        ), // Slight spacing between items
+                                        child: Text(
+                                          classList[index],
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
                               ),
                             ),
                           ],
