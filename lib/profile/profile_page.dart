@@ -252,7 +252,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 child: IconButton(
                   tooltip: "Display student card",
                   icon: const Icon(Icons.badge_outlined),
-                  onPressed: () => _showStudentCardDialog(profile),
+                  onPressed: _showStudentCardDialog,
                 ),
               ),
 
@@ -276,7 +276,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
         // Student card button
         OutlinedButton.icon(
-          onPressed: () => _showStudentCardDialog(profile),
+          onPressed: _showStudentCardDialog,
           icon: const Icon(Icons.badge_outlined),
           label: const Text("Display Student Card"),
         ),
@@ -545,10 +545,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   // Display for student card using the student_card_widget
-  Future<void> _showStudentCardDialog(Profile profile) {
+  Future<void> _showStudentCardDialog() {
     return showDialog<void>(
       context: context,
-      builder: (_) => StudentCardDialog(profile: profile),
+      builder: (_) => const StudentCardDialog(),
     );
   }
 
