@@ -1291,39 +1291,46 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadiusGeometry.all(Radius.circular(5)),
             ),
-            leading: getDirectionIcon(step["maneuver"]),
-            subtitle: Text(_formatDistance(step["distance"])),
-            title: Text(step["maneuver"] ?? "Proceed"),
+            leading: Icon(
+              getDirectionIcon(step["maneuver"]),
+              color: isSpecial ? Colors.white : null,
+            ),
+            subtitle: Text(
+              _formatDistance(step["distance"]),
+              style: TextStyle(color: isSpecial ? Colors.white : null),
+            ),
+            title: Text(
+              step["maneuver"] ?? "Proceed",
+              style: TextStyle(color: isSpecial ? Colors.white : null),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget getDirectionIcon(String? direction) {
-    if (direction == null) return Icon(Icons.navigation_sharp); // Fallback icon
+  IconData getDirectionIcon(String? direction) {
+    if (direction == null) return Icons.navigation_sharp; // Fallback icon
 
     direction = direction.toLowerCase();
 
     if (direction.toLowerCase() == "right" ||
         direction == "sharp right" ||
         direction == "slight right") {
-      return Icon(
-        Icons.turn_right_sharp,
-      ); // Note: swapped to turn_right for accuracy
+      return Icons.turn_right_sharp;
     } else if (direction == "left" ||
         direction == "sharp left" ||
         direction == "slight left") {
-      return Icon(Icons.turn_left_sharp);
+      return Icons.turn_left_sharp;
     } else if (direction == "straight") {
-      return Icon(Icons.straight_sharp);
+      return Icons.straight_sharp;
     } else if (direction == "uturn") {
-      return Icon(Icons.u_turn_left_sharp);
+      return Icons.u_turn_left_sharp;
     }
-    return Icon(Icons.close);
+    return Icons.close;
   }
 
-  // helper methods that converts the database's building
+  // helper method that converts the database's building
   // short names to the corresponding long name
   String _convertShortNameToLongName(String shortName) {
     if (shortName == "SHA") {
