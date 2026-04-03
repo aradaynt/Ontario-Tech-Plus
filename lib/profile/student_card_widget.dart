@@ -1,6 +1,10 @@
-import 'dart:math' as math;
+// OntarioTechPlus - student_card_widget.dart
 
+// Popout window for student card display. Can be used anywhere.
+
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:syncfusion_flutter_barcodes/barcodes.dart';
 import 'package:ontario_tech_plus/profile/profile_model.dart';
 
 // Popup for displaying the student card
@@ -20,7 +24,7 @@ class StudentCardDialog extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Branded popup background
+            // popup background
             const _StudentCardDialogBackground(),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420, maxHeight: 480),
@@ -43,7 +47,7 @@ class StudentCardDialog extends StatelessWidget {
                     ),
                     const SizedBox(height: 18),
                     Expanded(
-                      // White card container holding the student card content
+                      // White card container for holding student card content
                       child: Container(
                         padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
                         decoration: BoxDecoration(
@@ -84,7 +88,7 @@ class StudentCardDialog extends StatelessWidget {
   }
 }
 
-// Widget for displaying the student card inside the popup
+// Actual student card details for displaying in white box
 class StudentCardWidget extends StatelessWidget {
   const StudentCardWidget({super.key, required this.profile});
 
@@ -98,13 +102,8 @@ class StudentCardWidget extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         // Read available space from the dialog
-        final availableWidth = constraints.maxWidth.isFinite
-            ? constraints.maxWidth
-            : MediaQuery.sizeOf(context).width;
-        final hasBoundedHeight = constraints.maxHeight.isFinite;
-        final availableHeight = hasBoundedHeight
-            ? constraints.maxHeight
-            : 520.0;
+        final availableWidth = constraints.maxWidth;
+        final availableHeight = constraints.maxHeight;
 
         // Size the photo and barcode based on available room
         final photoSize = math
@@ -112,8 +111,8 @@ class StudentCardWidget extends StatelessWidget {
             .clamp(250.0, 420.0)
             .toDouble();
         final barcodeHeight = math
-            .min(52.0, availableHeight * 0.1)
-            .clamp(34.0, 52.0)
+            .min(74.0, availableHeight * 0.16)
+            .clamp(56.0, 74.0)
             .toDouble();
 
         // Photo section for the student card
@@ -162,7 +161,7 @@ class StudentCardWidget extends StatelessWidget {
           ),
         );
 
-        // Barcode section at the bottom of the card
+        // Barcode section
         final barcodeSection = Container(
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
           decoration: BoxDecoration(
@@ -175,13 +174,15 @@ class StudentCardWidget extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ClipRect(
-                child: SizedBox(
-                  height: barcodeHeight,
-                  width: double.infinity,
-                  child: CustomPaint(
-                    painter: _StudentBarcodePainter(profile.studentNumber),
-                  ),
+              SizedBox(
+                height: barcodeHeight,
+                width: double.infinity,
+                child: SfBarcodeGenerator(
+                  value: profile.studentNumber,
+                  symbology: Code128(),
+                  showValue: false,
+                  barColor: Colors.black,
+                  backgroundColor: Colors.transparent,
                 ),
               ),
               const SizedBox(height: 6),
@@ -196,22 +197,7 @@ class StudentCardWidget extends StatelessWidget {
           ),
         );
 
-        // Use a simple stacked layout when height is unbounded
-        if (!hasBoundedHeight) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              photoSection,
-              const SizedBox(height: 12),
-              textSection,
-              const SizedBox(height: 10),
-              barcodeSection,
-            ],
-          );
-        }
-
-        // Spread sections evenly when the dialog gives a fixed height
+        // Layout for popup student card
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -233,7 +219,7 @@ class StudentCardWidget extends StatelessWidget {
 class _StudentCardDialogBackground extends StatelessWidget {
   const _StudentCardDialogBackground();
 
-  // Build the blue popup background
+  // Blue background
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -246,8 +232,8 @@ class _StudentCardDialogBackground extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Light repeating pattern behind the popup
-          Positioned.fill(child: CustomPaint(painter: _OtPatternPainter())),
+          // Shapes patterns to add extra style to background
+          Positioned.fill(child: CustomPaint(painter: _PatternPainter())),
           // Ontario Tech text at the top
           Positioned(
             left: 24,
@@ -283,9 +269,9 @@ class _StudentCardDialogBackground extends StatelessWidget {
   }
 }
 
-// Painter for the popup background pattern
-class _OtPatternPainter extends CustomPainter {
-  // Paint the repeating background pattern
+// Painter for popup background pattern
+class _PatternPainter extends CustomPainter {
+  // Paint repeating background pattern
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
@@ -309,137 +295,4 @@ class _OtPatternPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-// Helper model for barcode sizing
-class _BarcodeMetrics {
-  const _BarcodeMetrics({
-    required this.quietZone,
-    required this.baseUnit,
-    required this.totalWidth,
-  });
-
-  final double quietZone;
-  final double baseUnit;
-  final double totalWidth;
-}
-
-// Painter used to draw the student number barcode
-class _StudentBarcodePainter extends CustomPainter {
-  const _StudentBarcodePainter(this.studentNumber);
-
-  final String studentNumber;
-
-  static const List<List<int>> _patterns = [
-    [1, 1, 1, 2, 2, 1],
-    [2, 1, 1, 1, 2, 2],
-    [1, 2, 1, 1, 2, 2],
-    [2, 2, 1, 1, 1, 2],
-    [1, 1, 2, 2, 1, 2],
-    [2, 1, 2, 1, 1, 2],
-    [1, 2, 2, 1, 1, 2],
-    [1, 1, 2, 1, 2, 2],
-    [2, 1, 1, 2, 1, 2],
-    [1, 2, 1, 2, 1, 2],
-  ];
-
-  // Calculate how wide each barcode unit should be
-  _BarcodeMetrics _metricsFor(Size size) {
-    final unitCount = _totalUnits(studentNumber);
-    final quietZone = math.max(4.0, size.width * 0.04);
-    final usableWidth = math.max(1.0, size.width - (quietZone * 2));
-    final baseUnit = usableWidth / unitCount;
-    return _BarcodeMetrics(
-      quietZone: quietZone,
-      baseUnit: baseUnit,
-      totalWidth: quietZone * 2 + (unitCount * baseUnit),
-    );
-  }
-
-  // Count the total number of barcode units needed
-  static double _totalUnits(String studentNumber) {
-    var units = 0.0;
-
-    // Start guard: 3 bars and 3 spaces.
-    units += 6;
-
-    for (final rune in studentNumber.runes) {
-      final digit = int.tryParse(String.fromCharCode(rune)) ?? 0;
-      final pattern = _patterns[digit];
-      for (final value in pattern) {
-        units += value;
-      }
-      units += 1; // inter-digit space
-    }
-
-    // End guard: 3 bars and 3 spaces.
-    units += 6;
-
-    return units;
-  }
-
-  // Paint the barcode using the student number digits
-  @override
-  void paint(Canvas canvas, Size size) {
-    final metrics = _metricsFor(size);
-    final paint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.fill;
-
-    final usableHeight = size.height;
-    var x = metrics.quietZone;
-
-    void drawBar(double units, double heightFactor) {
-      final width = metrics.baseUnit * units;
-      final height = usableHeight * heightFactor;
-      final top = usableHeight - height;
-      canvas.drawRect(Rect.fromLTWH(x, top, width, height), paint);
-      x += width;
-    }
-
-    void addSpace(double units) {
-      x += metrics.baseUnit * units;
-    }
-
-    for (var i = 0; i < 3; i++) {
-      drawBar(1, 0.98);
-      addSpace(1);
-    }
-
-    for (final rune in studentNumber.runes) {
-      final digit = int.tryParse(String.fromCharCode(rune)) ?? 0;
-      final pattern = _patterns[digit];
-
-      for (var i = 0; i < pattern.length; i++) {
-        if (i.isEven) {
-          final heightFactor = 0.58 + (0.08 * ((digit + i) % 4));
-          drawBar(pattern[i].toDouble(), math.min(heightFactor, 0.96));
-        } else {
-          addSpace(pattern[i].toDouble());
-        }
-      }
-
-      addSpace(1);
-    }
-
-    for (var i = 0; i < 3; i++) {
-      drawBar(1, 0.98);
-      addSpace(1);
-    }
-
-    final overflow = x - metrics.totalWidth;
-    if (overflow > 0.5) {
-      final coverPaint = Paint()..color = Colors.white;
-      canvas.drawRect(
-        Rect.fromLTWH(size.width - overflow, 0, overflow, size.height),
-        coverPaint,
-      );
-    }
-  }
-
-  // Repaint only if the student number changes
-  @override
-  bool shouldRepaint(covariant _StudentBarcodePainter oldDelegate) {
-    return oldDelegate.studentNumber != studentNumber;
-  }
 }

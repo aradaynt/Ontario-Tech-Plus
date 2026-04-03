@@ -1,6 +1,6 @@
 // OntarioTechPlus - profile_page.dart
 
-// Profile allows the user to view and edit account information. Also allows signout
+// Profile allows the user to view and edit account information, view student card, allow signout
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -245,6 +245,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
               ),
 
+              // Badge icon in top left of card
+              Positioned(
+                top: 6,
+                left: 6,
+                child: IconButton(
+                  tooltip: "Display student card",
+                  icon: const Icon(Icons.badge_outlined),
+                  onPressed: () => _showStudentCardDialog(profile),
+                ),
+              ),
+
               // Pencil icon in top right of card
               Positioned(
                 top: 6,
@@ -401,12 +412,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                   )
                 else // Editting
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
                     ),
-                    child: DropdownButtonFormField<String>(
+                    leading: const Icon(Icons.account_balance),
+                    title: DropdownButtonFormField<String>(
                       initialValue: _selectedFaculty,
                       decoration: const InputDecoration(labelText: "Faculty"),
                       items: _faculties
@@ -434,12 +446,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                   )
                 else // Editting
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
                     ),
-                    child: DropdownButtonFormField<String>(
+                    leading: const Icon(Icons.calendar_today),
+                    title: DropdownButtonFormField<String>(
                       initialValue: _selectedYear,
                       decoration: const InputDecoration(labelText: "Year"),
                       items: _years

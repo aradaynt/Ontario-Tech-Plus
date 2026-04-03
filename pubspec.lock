@@ -1074,6 +1074,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.12.0"
+  syncfusion_flutter_barcodes:
+    dependency: "direct main"
+    description:
+      name: syncfusion_flutter_barcodes
+      sha256: c7cafa18601a43cdb9017fb2ef26fd5455d4973a253690e086006ab50cce2673
+      url: "https://pub.dev"
+    source: hosted
+    version: "32.2.9"
   syncfusion_flutter_calendar:
     dependency: "direct main"
     description:
@@ -1086,10 +1094,10 @@ packages:
     dependency: transitive
     description:
       name: syncfusion_flutter_core
-      sha256: a7cc6eaed797806890de86b208b2094e66f61e278457867677a29b040ed56879
+      sha256: "7699e129fc48dfdbb6ad7f8396eaddf5b8f06c649c5bfabdeee5a73dbaca845c"
       url: "https://pub.dev"
     source: hosted
-    version: "32.2.7"
+    version: "32.2.9"
   syncfusion_flutter_datepicker:
     dependency: transitive
     description:
