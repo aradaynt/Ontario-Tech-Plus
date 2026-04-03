@@ -295,6 +295,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               ),
                               style: const TextStyle(color: Colors.white),
                               keyboardType: TextInputType.emailAddress,
+                              textCapitalization: TextCapitalization.none,
+                              autocorrect: false,
                               validator: _validateEmail,
                               textInputAction: TextInputAction.next,
                             ),
