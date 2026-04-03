@@ -60,6 +60,11 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   // list of user classes
   List<Map<String, dynamic>> _classList = [];
 
+  // dynamic route polyline variables
+  List<LatLng> _fullRoutePoints = [];
+  List<LatLng> _activeRoutePoints = [];
+  int _currentRouteIndex = 0;
+
   // map buildings
   final List<Building> _buildings = [
     Building("Shawenjigewining Hall", LatLng(43.946213, -78.896540), [
@@ -395,6 +400,10 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                         _selectedBuilding = null;
                         _routeFuture = null;
                         _activeDirections.clear();
+
+                        _fullRoutePoints.clear();
+                        _activeRoutePoints.clear();
+                        _currentRouteIndex = 0;
                       });
                     }
                   });
@@ -500,54 +509,36 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               ),
               // polyline layer that represents the route between the users
               // current position and their destination
-              if (_isRouting && _routeFuture != null)
-                FutureBuilder<Map<String, dynamic>>(
-                  future: _routeFuture, // Use the stored future!
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      // Show a loading indicator while
-                      // the route fetches
-                      return const Center(child: CircularProgressIndicator());
-                    } else if (snapshot.hasData) {
-                      // animatedly build the route
-                      return AnimatedBuilder(
-                        animation: _routeAnimation,
-                        builder: (context, child) {
-                          List<LatLng> points = [];
-                          for (var point in snapshot.data!["points"]) {
-                            points.add(LatLng(point.latitude, point.longitude));
-                          }
+              if (_isRouting)
+                if (_activeRoutePoints.isEmpty && _routeFuture != null)
+                  const Center(child: CircularProgressIndicator())
+                else if (_activeRoutePoints.isNotEmpty)
+                  AnimatedBuilder(
+                    animation: _routeAnimation,
+                    builder: (context, child) {
+                      // Calculate how many points to show based on the animation (0.0 to 1.0)
+                      // If actively navigating, display full array to avoid restarting the animation
+                      int pointCount = _isNavigating
+                          ? _activeRoutePoints.length
+                          : (_activeRoutePoints.length * _routeAnimation.value)
+                                .ceil();
 
-                          // Calculate how many points to show based
-                          // on the animation (0.0 to 1.0)
-                          int pointCount =
-                              (points.length * _routeAnimation.value).ceil();
-                          List<LatLng> animatedPoints = points
-                              .take(pointCount)
-                              .map((p) => LatLng(p.latitude, p.longitude))
-                              .toList();
+                      List<LatLng> animatedPoints = _activeRoutePoints
+                          .take(pointCount)
+                          .toList();
 
-                          return PolylineLayer(
-                            polylines: [
-                              // A Polyline needs at least 2 points
-                              // to be drawn on the canvas
-                              if (animatedPoints.length > 1)
-                                Polyline(
-                                  points: animatedPoints,
-                                  color: Color(0xFFE75D2A),
-                                  strokeWidth: 4,
-                                ),
-                            ],
-                          );
-                        },
+                      return PolylineLayer(
+                        polylines: [
+                          if (animatedPoints.length > 1)
+                            Polyline(
+                              points: animatedPoints,
+                              color: Color(0xFFE75D2A),
+                              strokeWidth: 4,
+                            ),
+                        ],
                       );
-                    } else if (snapshot.hasError) {
-                      // Handle any API errors gracefully
-                      return Center(child: Text('Error loading route'));
-                    }
-                    return Container();
-                  },
-                ),
+                    },
+                  ),
               // the Attribution Layer used to credit the map provider
               if (_showAttribution)
                 SimpleAttributionWidget(
@@ -623,8 +614,11 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                                       _isRouting = false;
                                       _destinationMarker = null;
                                       _selectedBuilding = null;
-                                      _routeFuture =
-                                          null; // Clear the drawn route line
+                                      _routeFuture = null;
+
+                                      _fullRoutePoints.clear();
+                                      _activeRoutePoints.clear();
+                                      _currentRouteIndex = 0;
                                     });
                                   }
                                 });
@@ -801,6 +795,10 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                           _isNavigating = false;
                           _isRouting = false;
                           _destinationMarker = null;
+
+                          _fullRoutePoints.clear();
+                          _activeRoutePoints.clear();
+                          _currentRouteIndex = 0;
                         });
                       });
                     },
@@ -1028,7 +1026,46 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
           });
 
           _checkIfCentered();
+
           if (_isNavigating && _selectedBuilding != null) {
+            // --- DYNAMIC POLYLINE UPDATE ---
+            // Calculate the closest route point ahead and stretch the polyline to seamlessly start at the user
+            if (_fullRoutePoints.isNotEmpty) {
+              LatLng currentLoc = _currentPosition!["position"];
+              int lookahead =
+                  20; // Bound the search to prevent skipping over overlapping loops
+              int maxIndex =
+                  (_currentRouteIndex + lookahead < _fullRoutePoints.length)
+                  ? _currentRouteIndex + lookahead
+                  : _fullRoutePoints.length;
+
+              double minDistance = double.infinity;
+              int bestIndex = _currentRouteIndex;
+
+              for (int i = _currentRouteIndex; i < maxIndex; i++) {
+                double dist = Geolocator.distanceBetween(
+                  currentLoc.latitude,
+                  currentLoc.longitude,
+                  _fullRoutePoints[i].latitude,
+                  _fullRoutePoints[i].longitude,
+                );
+                if (dist < minDistance) {
+                  minDistance = dist;
+                  bestIndex = i;
+                }
+              }
+
+              _currentRouteIndex = bestIndex;
+
+              setState(() {
+                // Pin the start exactly to the current user location and seamlessly append the remaining path
+                _activeRoutePoints = [
+                  currentLoc,
+                  ..._fullRoutePoints.sublist(_currentRouteIndex),
+                ];
+              });
+            }
+
             // 1. Check if the user has reached the final building (within 15 meters)
             double distanceToDest = Geolocator.distanceBetween(
               position.latitude,
@@ -1138,6 +1175,10 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               _selectedBuilding = null;
               _routeFuture = null;
               _activeDirections.clear();
+
+              _fullRoutePoints.clear();
+              _activeRoutePoints.clear();
+              _currentRouteIndex = 0;
             });
           }
         });
@@ -1166,6 +1207,16 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                   if (mounted && _isRouting) {
                     setState(() {
                       _activeDirections = List.from(routeData["directions"]);
+
+                      // Extract LatLng points to control the dynamic drawing
+                      _fullRoutePoints = [];
+                      for (var point in routeData["points"]) {
+                        _fullRoutePoints.add(
+                          LatLng(point.latitude, point.longitude),
+                        );
+                      }
+                      _activeRoutePoints = List.from(_fullRoutePoints);
+                      _currentRouteIndex = 0;
                     });
                     _routeAnimationController.forward();
                   }
@@ -1215,6 +1266,10 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
         _selectedBuilding = null;
         _activeDirections.clear();
         _routeFuture = null;
+
+        _fullRoutePoints.clear();
+        _activeRoutePoints.clear();
+        _currentRouteIndex = 0;
       });
     });
 
