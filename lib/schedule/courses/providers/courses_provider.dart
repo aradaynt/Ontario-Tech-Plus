@@ -188,6 +188,26 @@ class SectionEnrollmentService {
       'course_id': courseId,
     }, onConflict: 'user_id,course_id');
 
+    // Replace any previously saved section choices for this course so
+    // "My Courses" reflects only the selections made in the current enroll flow.
+    final sectionRows = await supabase
+        .from('course_sections')
+        .select('id')
+        .eq('course_id', courseId);
+
+    final courseSectionIds = (sectionRows as List)
+        .map((e) => (e as Map)['id'])
+        .whereType<int>()
+        .toList();
+
+    if (courseSectionIds.isNotEmpty) {
+      await supabase
+          .from('student_enrolled_sections')
+          .delete()
+          .eq('user_id', user.id)
+          .inFilter('section_id', courseSectionIds);
+    }
+
     // Insert section enrollments
     final payload = sectionIds
         .map((secID) => {'user_id': user.id, 'section_id': secID})
@@ -216,91 +236,80 @@ final myEnrolledCoursesProvider = FutureProvider<List<EnrolledCourse>>((
   final user = ref.read(currentUserProvider);
   if (user == null) return [];
 
-  // Query the view which returns the flattend results
+  // Query the user's enrolled section rows directly so we only return the
+  // exact lecture/lab/tutorial selections they chose.
   final rows = await supabase
-      .from('v_my_course_sections')
+      .from('student_enrolled_sections')
       .select('''
-      user_id,
-      course_id, course_code, course_name, term, subject_code, subject_name,
-      section_id, crn, section, schedule_type, campus, start_date, end_date,
-      day, start_time, end_time, building_shortname, room_code,
-      primary_instructor_name
+      section_id,
+      course_sections!inner (
+        id, crn, section, schedule_type, campus, start_date, end_date,
+        courses!inner (
+          id, course_code, course_name, term,
+          course_subjects (
+            code, name
+          )
+        ),
+        section_instructors (
+          role,
+          instructor (
+            name
+          )
+        ),
+        course_schedule (
+          day, start_time, end_time,
+          rooms (
+            room_code,
+            building (
+              shortname
+            )
+          )
+        )
+      )
     ''')
       .eq('user_id', user.id)
-      .order('term', ascending: false)
-      .order('course_code', ascending: true);
+      .order('created_at', ascending: true);
 
-  // Normalize rows into a list
-  final list = (rows as List)
-      .map((e) => (e as Map).cast<String, dynamic>())
-      .toList();
-
-  // Group by course
+  // Group selected sections by course for the UI.
   final Map<int, _CourseAgg> courseAgg = {};
 
-  // Interate every flat row and place it into correct course and section
-  for (final r in list) {
-    final courseId = r['course_id'] as int;
+  for (final row in (rows as List)) {
+    final enrolledRow = (row as Map).cast<String, dynamic>();
+    final sectionMap =
+        (enrolledRow['course_sections'] as Map?)?.cast<String, dynamic>();
+    if (sectionMap == null) continue;
+
+    final courseMap = (sectionMap['courses'] as Map?)?.cast<String, dynamic>();
+    if (courseMap == null) continue;
+
+    final subjectMap =
+        (courseMap['course_subjects'] as Map?)?.cast<String, dynamic>() ?? {};
+
+    final courseId = (courseMap['id'] as num).toInt();
     courseAgg.putIfAbsent(courseId, () {
       return _CourseAgg(
         courseId: courseId,
-        courseCode: (r['course_code'] as String?) ?? '',
-        courseName: (r['course_name'] as String?) ?? '',
-        term: (r['term'] as String?) ?? '',
-        subjectCode: (r['subject_code'] as String?) ?? '',
-        subjectName: (r['subject_name'] as String?) ?? '',
+        courseCode: (courseMap['course_code'] as String?) ?? '',
+        courseName: (courseMap['course_name'] as String?) ?? '',
+        term: (courseMap['term'] as String?) ?? '',
+        subjectCode: (subjectMap['code'] as String?) ?? '',
+        subjectName: (subjectMap['name'] as String?) ?? '',
       );
     });
 
     // Null check for section id (shouldnt happen)
-    final sectionId = r['section_id'];
+    final sectionId = sectionMap['id'];
     if (sectionId == null) continue;
 
-    final secID = sectionId as int;
-
-    // Retrieve/create the section object
-    final section = courseAgg[courseId]!.sections.putIfAbsent(secID, () {
-      final primaryName = (r['primary_instructor_name'] as String?)?.trim();
-
-      return CourseSection(
-        id: secID,
-        crn: (r['crn'] as String?) ?? '',
-        section: (r['section'] as String?) ?? '',
-        scheduleType: (r['schedule_type'] as String?) ?? '',
-        campus: (r['campus'] as String?) ?? '',
-        startDate: DateTime.parse(r['start_date'] as String),
-        endDate: DateTime.parse(r['end_date'] as String),
-        meetings: <SectionMeeting>[],
-        primaryInstructorName: (primaryName != null && primaryName.isNotEmpty)
-            ? primaryName
-            : null,
-        allInstructorNames: (primaryName != null && primaryName.isNotEmpty)
-            ? <String>[primaryName]
-            : <String>[],
-      );
-    });
-
-    // Meetng fields might be null if sec has no scheduled meetings yet
-    final day = r['day'];
-    final start = r['start_time'];
-    final end = r['end_time'];
-
-    // Only add meeting if all time components exist
-    if (day != null && start != null && end != null) {
-      section.meetings.add(
-        SectionMeeting(
-          day: day as String,
-          startTime: start as String,
-          endTime: end as String,
-          buildingShort: r['building_shortname'] as String?,
-          roomCode: r['room_code'] as String?,
-        ),
-      );
-    }
+    final secID = (sectionId as num).toInt();
+    courseAgg[courseId]!.sections.putIfAbsent(
+      secID,
+      () => CourseSection.fromMap(sectionMap),
+    );
   }
 
   // Convert aggregated struct into enrolledCourse list
-  return courseAgg.values.map((c) {
+  final courses = courseAgg.values.map((c) {
     final sections = c.sections.values.toList();
     sections.sort((a, b) {
       final t = a.scheduleType.compareTo(b.scheduleType);
@@ -318,6 +327,14 @@ final myEnrolledCoursesProvider = FutureProvider<List<EnrolledCourse>>((
       sections: sections,
     );
   }).toList();
+
+  courses.sort((a, b) {
+    final termCompare = b.term.compareTo(a.term);
+    if (termCompare != 0) return termCompare;
+    return a.courseCode.compareTo(b.courseCode);
+  });
+
+  return courses;
 });
 
 // Internal aggregation holder used by MyEnrolledCoursesProvider
