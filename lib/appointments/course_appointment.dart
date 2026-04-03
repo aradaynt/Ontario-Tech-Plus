@@ -4,7 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../student.dart';
 
 class CourseAppointmentPage extends StatefulWidget {
-  const CourseAppointmentPage({super.key});
+  final Student student;
+  const CourseAppointmentPage({super.key, required this.student});
 
   @override
   State<CourseAppointmentPage> createState() => _CourseAppointmentPageState();
@@ -25,6 +26,7 @@ class _CourseAppointmentPageState extends State<CourseAppointmentPage> {
   @override
   void initState() {
     super.initState();
+    student1 = widget.student;
     _initializeData();
   }
 
@@ -36,22 +38,6 @@ class _CourseAppointmentPageState extends State<CourseAppointmentPage> {
       if (user == null) {
         throw Exception("User is not logged in!");
       }
-
-      final profileResponse = await supabase
-          .from('profiles')
-          .select()
-          .eq('id', user.id)
-          .single();
-
-      student1 = Student(
-        name: "${profileResponse['firstname']} ${profileResponse['lastname']}",
-        studentid: int.parse(profileResponse['student_number'].toString()),
-        email: profileResponse['email'],
-        program: profileResponse['program'],
-        faculty: profileResponse['faculty'],
-        year: int.parse(profileResponse['year'].toString()),
-        courses: [],
-      );
 
       final enrolledResponse = await supabase
           .from('student_enrolled_courses')
