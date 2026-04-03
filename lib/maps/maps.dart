@@ -20,6 +20,7 @@ import 'building.dart';
 
 // Maps Page widget
 class MapsPage extends StatefulWidget {
+  // default constructor
   const MapsPage({super.key});
 
   // create state
@@ -254,7 +255,6 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               value: userId,
             ),
             callback: (payload) {
-              print('Detected change in courses, refreshing list...');
               _fetchAndParseClasses();
             },
           )
@@ -740,8 +740,13 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                     // on press move the camera to the user's location
                     onPressed: () {
                       if (_currentPosition == null) return;
-                      _mapController.move(_currentPosition!["position"], 17);
-                      _mapController.rotate(_currentPosition!["heading"]);
+
+                      if (_isNavigating) {
+                        _mapController.move(_currentPosition!["position"], 18);
+                        _mapController.rotate(_currentPosition!["heading"]);
+                      } else {
+                        _mapController.move(_currentPosition!["position"], 17);
+                      }
 
                       setState(() {
                         _cameraPosition = _currentPosition!["position"];
@@ -1029,7 +1034,6 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
         ).listen((Position position) {
           // update position
           setState(() {
-            print(position.heading);
             _currentPosition = {
               "position": LatLng(position.latitude, position.longitude),
               "heading": position.heading,
@@ -1452,7 +1456,6 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       // return the response
       return response;
     } catch (error) {
-      print("Error fetching class rooms: $error");
       return [];
     }
   }
