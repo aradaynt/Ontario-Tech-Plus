@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ontario_tech_plus/auth/auth_providers.dart';
+import 'package:ontario_tech_plus/auth/password_reset_page.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -237,6 +238,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final buttonText = _isLogin
         ? "Login"
         : (_signupStep == 0 ? "Next" : "Sign Up");
+    // Show a one time auth status message when returning to login after pass reset
+    final statusMessage = ref.watch(authStatusMessageProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -484,6 +487,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                           const SizedBox(height: 24),
 
+                          // Success message shown after password reset
+                          if (statusMessage != null) ...[
+                            Text(
+                              statusMessage,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Color(0xFFB7F7C3)),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+
                           // If there is an error, place to show
                           if (_error != null)
                             Text(
@@ -515,7 +528,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                           // Toggle button for signup or signin
                           TextButton(
-                            onPressed: _toggleMode,
+                            onPressed: () {
+                              // Clear the success message when changing modes
+                              ref
+                                  .read(authStatusMessageProvider.notifier)
+                                  .clear();
+                              _toggleMode();
+                            },
                             child: Text(
                               _isLogin
                                   ? "Don't have an account? Sign up"
@@ -523,6 +542,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               style: const TextStyle(color: Colors.white),
                             ),
                           ),
+
+                          if (_isLogin)
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const PasswordResetPage(),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                'Forgot Password',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
                         ],
                       ),
                     ),

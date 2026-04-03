@@ -112,8 +112,42 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             return _buildProfileView(context, auth, _cachedProfile!);
           }
 
-          // This is only shown if not during a signout and there is actually not profile
-          return const Center(child: Text("No profile found"));
+          // This is only shown if not during a signout and there is actually not a profile
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'There seems an issue with your account. Please contact the app developers.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: _isSigningOut
+                        ? null
+                        : () async {
+                            setState(() => _isSigningOut = true);
+                            await auth.signOut();
+                          },
+                    icon: _isSigningOut
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.logout),
+                    label: const Text("Logout"),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
         },
       ),
     );
