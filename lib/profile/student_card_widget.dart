@@ -4,18 +4,20 @@
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:syncfusion_flutter_barcodes/barcodes.dart';
 import 'package:ontario_tech_plus/profile/profile_model.dart';
+import 'package:ontario_tech_plus/profile/profile_provider.dart';
 
 // Popup for displaying the student card
-class StudentCardDialog extends StatelessWidget {
-  const StudentCardDialog({super.key, required this.profile});
-
-  final Profile profile;
+class StudentCardDialog extends ConsumerWidget {
+  const StudentCardDialog({super.key});
 
   // Build popup for the student card
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(profileProvider);
+
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -71,7 +73,24 @@ class StudentCardDialog extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Expanded(
-                              child: StudentCardWidget(profile: profile),
+                              // Use profile provider for data
+                              child: profileAsync.when(
+                                data: (profile) {
+                                  if (profile == null) {
+                                    return const Center(
+                                      child: Text("Student card unavailable"),
+                                    );
+                                  }
+
+                                  return StudentCardWidget(profile: profile);
+                                },
+                                loading: () => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                                error: (_, _) => const Center(
+                                  child: Text("Error loading student card"),
+                                ),
+                              ),
                             ),
                           ],
                         ),
