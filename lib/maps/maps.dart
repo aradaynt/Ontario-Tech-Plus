@@ -55,7 +55,6 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   Building? _selectedBuilding;
 
   // future route
-  // Future<List<PointLatLng>>? _routeFuture;
   Future<Map<String, dynamic>>? _routeFuture;
 
   // list of user classes
@@ -229,37 +228,15 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   bool _showAttribution = true;
   bool _isClassListVisible = false;
 
-  // enrolment table subscription
-  RealtimeChannel? _enrollmentSubscription;
-
   // initState
   @override
   void initState() {
+    // super initState
     super.initState();
     _setupLocation();
 
+    // fetch the user's current classes and save them in _classList
     _fetchAndParseClasses();
-
-    final userId = Supabase.instance.client.auth.currentUser?.id;
-    if (userId != null) {
-      _enrollmentSubscription = Supabase.instance.client
-          .channel('public:student_enrolled_sections')
-          .onPostgresChanges(
-            event: PostgresChangeEvent.all,
-            // Listens to INSERT, UPDATE, DELETE
-            schema: 'public',
-            table: 'student_enrolled_sections',
-            filter: PostgresChangeFilter(
-              type: PostgresChangeFilterType.eq,
-              column: 'user_id',
-              value: userId,
-            ),
-            callback: (payload) {
-              _fetchAndParseClasses();
-            },
-          )
-          .subscribe();
-    }
 
     // initialize the select animation controller
     _selectionAnimationController = AnimationController(
@@ -462,6 +439,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                     _selectBuilding();
                   }
                 },
+                // build each of the building polygons
                 child: AnimatedBuilder(
                   animation: _selectionAnimationController,
                   builder: (context, child) {
@@ -493,8 +471,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                   },
                 ),
               ),
-              // the third layer is the MarkerLayer that is used to mark locations
-              // on the map with a widget.
+              // the third layer is the MarkerLayer that is used to
+              // mark locations on the map with a widget.
               MarkerLayer(markers: [?_destinationMarker]),
               // the fourth layer is the currentLocationLayer, that displays the
               // users current location and the direction their device is
@@ -520,6 +498,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                       : Size.square(20),
                 ),
               ),
+              // polyline layer that represents the route between the users
+              // current position and their destination
               if (_isRouting && _routeFuture != null)
                 FutureBuilder<Map<String, dynamic>>(
                   future: _routeFuture, // Use the stored future!
@@ -529,11 +509,11 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                       // the route fetches
                       return const Center(child: CircularProgressIndicator());
                     } else if (snapshot.hasData) {
+                      // animatedly build the route
                       return AnimatedBuilder(
                         animation: _routeAnimation,
                         builder: (context, child) {
                           List<LatLng> points = [];
-
                           for (var point in snapshot.data!["points"]) {
                             points.add(LatLng(point.latitude, point.longitude));
                           }
@@ -542,7 +522,6 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                           // on the animation (0.0 to 1.0)
                           int pointCount =
                               (points.length * _routeAnimation.value).ceil();
-
                           List<LatLng> animatedPoints = points
                               .take(pointCount)
                               .map((p) => LatLng(p.latitude, p.longitude))
@@ -593,7 +572,9 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               ),
             ],
           ),
+          // -------------------------------------------------------------------
           // end of FlutterMap widget
+          // -------------------------------------------------------------------
           // box that displays name of tapped building and route info
           Align(
             alignment: AlignmentGeometry.topCenter,
@@ -613,6 +594,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                     padding: const EdgeInsets.only(left: 16.0, right: 8.0),
                     child: Column(
                       children: [
+                        // row that displays the building name and the dismiss
+                        // button
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -652,7 +635,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                         ),
                         // row that shows information about the rout (distance,
                         // duration) and whether or not the user has any
-                        // classes in the building
+                        // classes in the building today
                         Row(
                           children: [
                             FutureBuilder<Map<String, dynamic>>(
@@ -827,6 +810,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               ),
             ),
           ),
+          // button that slides out the users current course list
           Positioned(
             top: 10,
             left: 10,
@@ -964,6 +948,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                   borderRadius: BorderRadius.circular(5),
                   boxShadow: [BoxShadow(blurRadius: 3, color: Colors.black26)],
                 ),
+                // if the list of steps is not empty display the list
                 child: _activeDirections.isNotEmpty
                     ? AnimatedList(
                         key: _listKey,
@@ -982,6 +967,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                           );
                         },
                       )
+                    // otherwise show default text
                     : const Center(
                         child: Padding(
                           padding: EdgeInsets.all(16.0),
@@ -1003,12 +989,13 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   // dispose
   @override
   void dispose() {
-    _enrollmentSubscription?.unsubscribe();
-    // dispose of position stream
+    // dispose of animation controllers
     _selectionAnimationController.dispose();
     _recenterAnimationController.dispose();
     _routeAnimationController.dispose();
     _beginNavAnimationController.dispose();
+
+    // dispose of position stream
     _positionStreamSubscription?.cancel();
     super.dispose();
   }
@@ -1185,7 +1172,6 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                 });
           }
         });
-
         _selectionAnimationController.forward(from: 0.0);
       }
     }
@@ -1235,8 +1221,10 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     _selectionAnimationController.reverse();
   }
 
+  // helper method that goes through the list of the user's classes and gets
+  // the ones tha take place in the selected building
   List<String> _classesInBuilding() {
-    // 1. Fix the empty state return
+    // empty state return
     if (_selectedBuilding == null) {
       return [];
     }
@@ -1244,22 +1232,25 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     String buildingName = _selectedBuilding!.name;
     List<String> sectionsInBuilding = [];
 
-    // Get the current day of the week (e.g., "Monday", "Tuesday")
+    // get the current day of the week
     String currentDay = DateFormat('EEEE').format(DateTime.now());
 
+    // loop over classes
     for (var course in _classList) {
+      // loop over each course's sections
       for (var section in course["sections"]) {
         String locationString = section["location"] ?? "";
 
-        // Extract short name safely
+        // get the building short name
         String shortName = locationString.isNotEmpty
             ? locationString.split(" ")[0]
             : "";
 
-        // 2. Filter by building AND the current day of the week
+        // check if the short name matches the building name and if the day is
+        // the current day
         if (_convertShortNameToLongName(shortName) == buildingName &&
             section["day"] == currentDay) {
-          // 3. Include the full location (which contains the room number) in the UI display
+          // add the course information as a formated string for displaying
           sectionsInBuilding.add(
             "${course["name"]} - ${section["location"]}, ${section["time"]}",
           );
@@ -1267,14 +1258,16 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       }
     }
 
-    // Optional: Add a fallback message if no classes are scheduled there today
+    // message if no classes are scheduled there today
     if (sectionsInBuilding.isEmpty) {
       return ["No classes here today"];
     }
 
+    // return the list of sections
     return sectionsInBuilding;
   }
 
+  // method that builds one navigation step for the list of steps
   Widget _buildStepItem(
     Map<String, dynamic> step,
     Animation<double> animation, {
@@ -1309,8 +1302,10 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     );
   }
 
+  // get the matching icon for the direction of the navigation step
   IconData getDirectionIcon(String? direction) {
-    if (direction == null) return Icons.navigation_sharp; // Fallback icon
+    // default icon
+    if (direction == null) return Icons.navigation_sharp;
 
     direction = direction.toLowerCase();
 
@@ -1467,6 +1462,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     }
   }
 
+  // method that makes database query and formats it for use
   Future<void> _fetchAndParseClasses() async {
     final data = await _fetchClasses();
 
@@ -1536,12 +1532,15 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
           jsonDecode(response.body) as Map<String, dynamic>;
 
       // process relevant information
+      // get polyline
       String geometry = temp["routes"][0]["geometry"];
       List<PointLatLng> points = PolylinePoints.decodePolyline(geometry);
 
+      // get duration and distance of entire trip
       int duration = 0;
       double distance = 0.0;
 
+      // type checking for safety
       if (temp["routes"][0]["duration"] is int) {
         duration = temp["routes"][0]["duration"];
       } else {
@@ -1553,8 +1552,10 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
         distance = temp["routes"][0]["distance"];
       }
 
+      // list that stores each navigation direction
       List<Map<String, dynamic>> directions = [];
 
+      // loop over each navigation step and add it to the list
       for (Map<String, dynamic> step in temp["routes"][0]["legs"][0]["steps"]) {
         double dist = 0.0;
         if (step["distance"] is int) {
