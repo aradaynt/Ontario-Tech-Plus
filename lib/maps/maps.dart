@@ -45,7 +45,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   final LayerHitNotifier<Building> _polygonHtNotifier = ValueNotifier(null);
 
   // device location
-  LatLng? _currentPosition;
+  Map<String, dynamic>? _currentPosition;
 
   // camera position on map
   LatLng? _cameraPosition;
@@ -195,6 +195,12 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
 
   // marker
   Marker? _destinationMarker;
+
+  // active list of directions for live navigation
+  List<Map<String, dynamic>> _activeDirections = [];
+
+  // Key to control the animated list
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
 
   // selection animations
   late AnimationController _selectionAnimationController;
@@ -411,6 +417,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                         _destinationMarker = null;
                         _selectedBuilding = null;
                         _routeFuture = null;
+                        _activeDirections.clear();
                       });
                     }
                   });
@@ -450,7 +457,11 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               // as true.
               GestureDetector(
                 // on tap call _selectBuilding
-                onTap: _selectBuilding,
+                onTap: () {
+                  if (!_isNavigating) {
+                    _selectBuilding();
+                  }
+                },
                 child: AnimatedBuilder(
                   animation: _selectionAnimationController,
                   builder: (context, child) {
@@ -625,6 +636,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                                   // then clear the state
                                   if (mounted) {
                                     setState(() {
+                                      _isNavigating = false;
                                       _isRouting = false;
                                       _destinationMarker = null;
                                       _selectedBuilding = null;
@@ -706,10 +718,11 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                     // on press move the camera to the user's location
                     onPressed: () {
                       if (_currentPosition == null) return;
-                      _mapController.move(_currentPosition!, 17);
+                      _mapController.move(_currentPosition!["position"], 17);
+                      _mapController.rotate(_currentPosition!["heading"]);
 
                       setState(() {
-                        _cameraPosition = _currentPosition;
+                        _cameraPosition = _currentPosition!["position"];
                       });
 
                       _checkIfCentered();
@@ -735,6 +748,14 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                   onPressed: () {
                     _beginNavAnimationController.forward();
                     _selectionAnimationController.reverse();
+                    _mapController.rotate(_currentPosition!["heading"]);
+                    _mapController.move(
+                      LatLng(
+                        _currentPosition!["position"].latitude,
+                        _currentPosition!["position"].longitude,
+                      ),
+                      18,
+                    );
                     setState(() {
                       _isNavigating = true;
                     });
@@ -794,7 +815,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               },
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFF003C71), // Matches your app's theme
+                  color: const Color(0xFF003C71),
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: const [
                     BoxShadow(blurRadius: 3, color: Colors.black26),
@@ -893,6 +914,56 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               ),
             ),
           ),
+          // navigation widget that displays the list of navigation steps
+          AnimatedPositioned(
+            curve: Curves.easeInOut,
+            top: 70,
+            bottom: 120,
+            right: _isNavigating ? 10 : -160,
+            width: 140,
+            duration: Duration(milliseconds: 300),
+            child: AnimatedBuilder(
+              animation: _onSelectDownSlide,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(1.0, _onSelectDownSlide.value.dy * 50.0),
+                  child: child,
+                );
+              },
+              child: Container(
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(5),
+                  boxShadow: [BoxShadow(blurRadius: 3, color: Colors.black26)],
+                ),
+                child: _activeDirections.isNotEmpty
+                    ? AnimatedList(
+                        key: _listKey,
+                        shrinkWrap: true,
+                        initialItemCount: _activeDirections.length,
+                        itemBuilder: (context, index, animation) {
+                          // Highlight the first and last step
+                          bool special =
+                              (index == 0 ||
+                              index == _activeDirections.length - 1);
+
+                          return _buildStepItem(
+                            _activeDirections[index],
+                            animation,
+                            isSpecial: special,
+                          );
+                        },
+                      )
+                    : const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text("Arriving soon!"),
+                        ),
+                      ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -930,16 +1001,62 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
         Geolocator.getPositionStream(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.high,
-            distanceFilter: 10,
+            distanceFilter: 1,
           ),
           //   listen for position events
         ).listen((Position position) {
           // update position
           setState(() {
-            _currentPosition = LatLng(position.latitude, position.longitude);
+            print(position.heading);
+            _currentPosition = {
+              "position": LatLng(position.latitude, position.longitude),
+              "heading": position.heading,
+            };
           });
 
           _checkIfCentered();
+          if (_isNavigating && _selectedBuilding != null) {
+            // 1. Check if the user has reached the final building (within 15 meters)
+            double distanceToDest = Geolocator.distanceBetween(
+              position.latitude,
+              position.longitude,
+              _selectedBuilding!.centre.latitude,
+              _selectedBuilding!.centre.longitude,
+            );
+
+            if (distanceToDest < 15.0) {
+              _handleArrival();
+            }
+            // 2. Check if the user completed the next step (within 15 meters)
+            else if (_activeDirections.isNotEmpty) {
+              LatLng nextStep = _activeDirections[0]["location"];
+              double distanceToStep = Geolocator.distanceBetween(
+                position.latitude,
+                position.longitude,
+                nextStep.latitude,
+                nextStep.longitude,
+              );
+
+              if (distanceToStep < 15.0) {
+                // Grab the completed step and remove it from the underlying data
+                final completedStep = _activeDirections.removeAt(0);
+
+                // Trigger the exit animation
+                _listKey.currentState?.removeItem(
+                  0,
+                  (context, animation) => _buildStepItem(
+                    completedStep,
+                    animation,
+                    isSpecial:
+                        true, // It was the top item, so keep its highlight color as it fades
+                  ),
+                  duration: const Duration(
+                    milliseconds: 500,
+                  ), // Adjust animation speed here
+                );
+              }
+            }
+          }
         });
   }
 
@@ -1007,6 +1124,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               _destinationMarker = null;
               _selectedBuilding = null;
               _routeFuture = null;
+              _activeDirections.clear();
             });
           }
         });
@@ -1027,13 +1145,18 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
             _routeAnimationController.reset(); // Reset the line
 
             _routeFuture =
-                fetchRoute(_currentPosition!, _selectedBuilding!.centre)
-                  ..then((_) {
-                    // Play the animation once the future completes
-                    if (mounted && _isRouting) {
-                      _routeAnimationController.forward();
-                    }
-                  });
+                fetchRoute(
+                  _currentPosition!["position"],
+                  _selectedBuilding!.centre,
+                )..then((routeData) {
+                  // Populate our state list once the future completes
+                  if (mounted && _isRouting) {
+                    setState(() {
+                      _activeDirections = List.from(routeData["directions"]);
+                    });
+                    _routeAnimationController.forward();
+                  }
+                });
           }
         });
 
@@ -1048,8 +1171,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     if (_currentPosition == null || _cameraPosition == null) return;
 
     double distance = Geolocator.distanceBetween(
-      _currentPosition!.latitude,
-      _currentPosition!.longitude,
+      _currentPosition!["position"].latitude,
+      _currentPosition!["position"].longitude,
       _cameraPosition!.latitude,
       _cameraPosition!.longitude,
     );
@@ -1059,6 +1182,31 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     } else {
       _recenterAnimationController.reverse();
     }
+  }
+
+  void _handleArrival() {
+    // Show a success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("You have reached your destination!"),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 4),
+      ),
+    );
+
+    // Close out of navigation and reset state
+    _beginNavAnimationController.reverse().then((_) {
+      setState(() {
+        _isNavigating = false;
+        _isRouting = false;
+        _destinationMarker = null;
+        _selectedBuilding = null;
+        _activeDirections.clear();
+        _routeFuture = null;
+      });
+    });
+
+    _selectionAnimationController.reverse();
   }
 
   List<String> _classesInBuilding() {
@@ -1099,6 +1247,54 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     }
 
     return sectionsInBuilding;
+  }
+
+  Widget _buildStepItem(
+    Map<String, dynamic> step,
+    Animation<double> animation, {
+    bool isSpecial = false,
+  }) {
+    return SizeTransition(
+      sizeFactor: animation,
+      child: FadeTransition(
+        opacity: animation,
+        child: Material(
+          color: Colors.transparent,
+          child: ListTile(
+            tileColor: isSpecial ? const Color(0xFFE75D2A) : null,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadiusGeometry.all(Radius.circular(5)),
+            ),
+            leading: getDirectionIcon(step["maneuver"]),
+            subtitle: Text(_formatDistance(step["distance"])),
+            title: Text(step["maneuver"] ?? "Proceed"),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget getDirectionIcon(String? direction) {
+    if (direction == null) return Icon(Icons.navigation_sharp); // Fallback icon
+
+    direction = direction.toLowerCase();
+
+    if (direction.toLowerCase() == "right" ||
+        direction == "sharp right" ||
+        direction == "slight right") {
+      return Icon(
+        Icons.turn_right_sharp,
+      ); // Note: swapped to turn_right for accuracy
+    } else if (direction == "left" ||
+        direction == "sharp left" ||
+        direction == "slight left") {
+      return Icon(Icons.turn_left_sharp);
+    } else if (direction == "straight") {
+      return Icon(Icons.straight_sharp);
+    } else if (direction == "uturn") {
+      return Icon(Icons.u_turn_left_sharp);
+    }
+    return Icon(Icons.close);
   }
 
   // helper methods that converts the database's building
@@ -1325,11 +1521,32 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
         distance = temp["routes"][0]["distance"];
       }
 
+      List<Map<String, dynamic>> directions = [];
+
+      for (Map<String, dynamic> step in temp["routes"][0]["legs"][0]["steps"]) {
+        double dist = 0.0;
+        if (step["distance"] is int) {
+          dist = step["distance"].toDouble();
+        } else {
+          dist = step["distance"];
+        }
+
+        // OSRM returns coordinates in [longitude, latitude] format
+        var location = step["maneuver"]["location"];
+
+        directions.add({
+          "distance": dist,
+          "maneuver": step["maneuver"]["modifier"],
+          "location": location,
+        });
+      }
+
       // create output map
       Map<String, dynamic> routeInfo = {
         "points": points,
         "distance": distance,
         "duration": Duration(seconds: duration),
+        "directions": directions,
       };
 
       // return the route information
