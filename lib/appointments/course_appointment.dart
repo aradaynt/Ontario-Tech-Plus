@@ -337,7 +337,10 @@ class _CourseAppointmentPageState extends State<CourseAppointmentPage> {
                         padding: const EdgeInsets.all(8.0),
                         child: Text(
                           time.toString(),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
                         ),
                       ),
                     ),
