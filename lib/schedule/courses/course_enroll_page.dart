@@ -169,84 +169,89 @@ class _CourseEnrollPageState extends ConsumerState<CourseEnrollPage> {
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
                 // Enroll button
-                ElevatedButton.icon(
-                  onPressed: _isSaving
-                      ? null
-                      : () async {
-                          // Validate required selections
-                          final missing = <String>[];
-                          if (requiresLecture && _selectedLectureId == null) {
-                            missing.add("Lecture");
-                          }
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: ElevatedButton.icon(
+                    onPressed: _isSaving
+                        ? null
+                        : () async {
+                            // Validate required selections
+                            final missing = <String>[];
+                            if (requiresLecture && _selectedLectureId == null) {
+                              missing.add("Lecture");
+                            }
 
-                          if (requiresTutorial && _selectedTutorialId == null) {
-                            missing.add("Tutorial");
-                          }
+                            if (requiresTutorial &&
+                                _selectedTutorialId == null) {
+                              missing.add("Tutorial");
+                            }
 
-                          if (requiresLab && _selectedLabId == null) {
-                            missing.add("Lab");
-                          }
+                            if (requiresLab && _selectedLabId == null) {
+                              missing.add("Lab");
+                            }
 
-                          if (missing.isNotEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  "Please select: ${missing.join(', ')}",
+                            if (missing.isNotEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    "Please select: ${missing.join(', ')}",
+                                  ),
                                 ),
-                              ),
-                            );
-                            return;
-                          }
+                              );
+                              return;
+                            }
 
-                          // Collect selected section ids
-                          final selectedIds = <int>[
-                            if (_selectedLectureId != null) _selectedLectureId!,
-                            if (_selectedTutorialId != null)
-                              _selectedTutorialId!,
-                            if (_selectedLabId != null) _selectedLabId!,
-                          ];
+                            // Collect selected section ids
+                            final selectedIds = <int>[
+                              if (_selectedLectureId != null)
+                                _selectedLectureId!,
+                              if (_selectedTutorialId != null)
+                                _selectedTutorialId!,
+                              if (_selectedLabId != null) _selectedLabId!,
+                            ];
 
-                          setState(() => _isSaving = true);
+                            setState(() => _isSaving = true);
 
-                          try {
-                            // Use enrollement provider
-                            await ref
-                                .read(enrollInSectionsProvider)
-                                .enrollSections(
-                                  courseId: widget.course.id,
-                                  sectionIds: selectedIds,
+                            try {
+                              // Use enrollement provider
+                              await ref
+                                  .read(enrollInSectionsProvider)
+                                  .enrollSections(
+                                    courseId: widget.course.id,
+                                    sectionIds: selectedIds,
+                                  );
+
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Enrolled successfully."),
+                                  ),
                                 );
-
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Enrolled successfully."),
-                                ),
-                              );
-                              Navigator.pop(context);
+                                Navigator.pop(context);
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Enroll failed: $e")),
+                                );
+                              }
+                            } finally {
+                              if (mounted) setState(() => _isSaving = false);
                             }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text("Enroll failed: $e")),
-                              );
-                            }
-                          } finally {
-                            if (mounted) setState(() => _isSaving = false);
-                          }
-                        },
-                  icon: _isSaving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.add),
-                  label: Text(
-                    _isSaving ? "Adding..." : "Add Selected Schedule",
+                          },
+                    icon: _isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.add),
+                    label: Text(
+                      _isSaving ? "Adding..." : "Add Selected Schedule",
+                    ),
                   ),
                 ),
               ],
@@ -302,7 +307,7 @@ class _CourseEnrollPageState extends ConsumerState<CourseEnrollPage> {
           final end = m.endTime.length >= 5
               ? m.endTime.substring(0, 5)
               : m.endTime;
-          return "$day $start–$end @ ${m.displayLocation}";
+          return "$day $start-$end @ ${m.displayLocation}";
         })
         .join(" • ");
   }

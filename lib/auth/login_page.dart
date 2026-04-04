@@ -5,9 +5,11 @@
 // UI can still use some work
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ontario_tech_plus/auth/auth_providers.dart';
+import 'package:ontario_tech_plus/auth/password_reset_page.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -25,6 +27,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _lastNameController = TextEditingController();
   final _studentNumberController = TextEditingController();
   final _programController = TextEditingController();
+  final _studentNumberFocusNode = FocusNode();
 
   String? _selectedFaculty;
   String? _selectedYear;
@@ -135,9 +138,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         }
       }
     } catch (e) {
+      // Handles errors on login
       setState(() {
-        _error = "Authentication failed. Please try again.";
-        //_error = e.toString();
+        _error = e is AuthFailure
+            ? e.message
+            : "Authentication failed. Please try again.";
       });
     } finally {
       if (mounted) {
@@ -188,6 +193,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     _lastNameController.dispose();
     _studentNumberController.dispose();
     _programController.dispose();
+    _studentNumberFocusNode.dispose();
     super.dispose();
   }
 
@@ -235,6 +241,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final buttonText = _isLogin
         ? "Login"
         : (_signupStep == 0 ? "Next" : "Sign Up");
+    // Show a one time auth status message when returning to login after pass reset
+    final statusMessage = ref.watch(authStatusMessageProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -290,6 +298,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               ),
                               style: const TextStyle(color: Colors.white),
                               keyboardType: TextInputType.emailAddress,
+                              textCapitalization: TextCapitalization.none,
+                              autocorrect: false,
                               validator: _validateEmail,
                               textInputAction: TextInputAction.next,
                             ),
@@ -351,18 +361,47 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               const SizedBox(height: 16),
 
                               // Student number input field
-                              TextFormField(
-                                controller: _studentNumberController,
-                                decoration: _inputDecoration(
-                                  "Student Number",
-                                  icon: Icons.badge_outlined,
-                                ),
-                                style: const TextStyle(color: Colors.white),
-                                keyboardType: TextInputType.number,
-                                validator: _validateStudentNumber,
-                                textInputAction: TextInputAction.done,
-                                onFieldSubmitted: (_) {
-                                  if (!_loading) _submit(); // "Next"
+                              ListenableBuilder(
+                                listenable: Listenable.merge([
+                                  _studentNumberController,
+                                  _studentNumberFocusNode,
+                                ]),
+                                builder: (context, _) {
+                                  final showCount =
+                                      _studentNumberFocusNode.hasFocus;
+
+                                  return TextFormField(
+                                    controller: _studentNumberController,
+                                    focusNode: _studentNumberFocusNode,
+                                    decoration:
+                                        _inputDecoration(
+                                          "Student Number",
+                                          icon: Icons.badge_outlined,
+                                        ).copyWith(
+                                          counterText: '',
+                                          // Counter for the student number entry
+                                          suffixText: showCount
+                                              ? '${_studentNumberController.text.length}/9'
+                                              : null,
+                                          suffixStyle: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                    style: const TextStyle(color: Colors.white),
+                                    // Set keyboard type, and the max length
+                                    keyboardType: TextInputType.number,
+                                    maxLength: 9,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                      LengthLimitingTextInputFormatter(9),
+                                    ],
+                                    validator: _validateStudentNumber,
+                                    textInputAction: TextInputAction.done,
+                                    onFieldSubmitted: (_) {
+                                      if (!_loading) _submit(); // "Next"
+                                    },
+                                  );
                                 },
                               ),
                             ],
@@ -453,6 +492,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                           const SizedBox(height: 24),
 
+                          // Success message shown after password reset
+                          if (statusMessage != null) ...[
+                            Text(
+                              statusMessage,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Color(0xFFB7F7C3)),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+
                           // If there is an error, place to show
                           if (_error != null)
                             Text(
@@ -484,7 +533,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                           // Toggle button for signup or signin
                           TextButton(
-                            onPressed: _toggleMode,
+                            onPressed: () {
+                              // Clear the success message when changing modes
+                              ref
+                                  .read(authStatusMessageProvider.notifier)
+                                  .clear();
+                              _toggleMode();
+                            },
                             child: Text(
                               _isLogin
                                   ? "Don't have an account? Sign up"
@@ -492,6 +547,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               style: const TextStyle(color: Colors.white),
                             ),
                           ),
+
+                          if (_isLogin)
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const PasswordResetPage(),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                'Forgot Password',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
                         ],
                       ),
                     ),

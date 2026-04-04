@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:ontario_tech_plus/auth/auth_providers.dart';
 import 'package:ontario_tech_plus/profile/profile_provider.dart';
 import 'package:ontario_tech_plus/home/app_drawer.dart';
 
@@ -15,6 +16,7 @@ class HomePage extends ConsumerWidget {
     return profileAsync.when(
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
+
       error: (_, __) => const Scaffold(
         body: Center(
           child: Text(
@@ -23,20 +25,21 @@ class HomePage extends ConsumerWidget {
           ),
         ),
       ),
+
       data: (profile) {
         if (profile == null) {
-          return const Scaffold(body: Center(child: Text("No profile found")));
+          return const _MissingProfileScaffold();
         }
 
         return Scaffold(
           drawer: const AppDrawer(),
           body: CustomScrollView(
             slivers: [
-              // ================= COLLAPSIBLE HEADER WITHOUT STATIC TITLE =================
+              // ================= HEADER =================
               SliverAppBar(
                 pinned: true,
                 expandedHeight: 180,
-                backgroundColor: Colors.transparent,
+                backgroundColor: const Color(0xFF0055B7),
                 elevation: 0,
                 leading: Builder(
                   builder: (context) => IconButton(
@@ -52,43 +55,49 @@ class HomePage extends ConsumerWidget {
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   collapseMode: CollapseMode.parallax,
-                  background: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF0055B7), Color(0xFF00AEEF)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                  background: SafeArea(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF0055B7), Color(0xFF00AEEF)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                       ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Welcome back,",
-                          style: TextStyle(color: Colors.white70, fontSize: 16),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "${profile.firstname} ${profile.lastname}",
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Welcome back,",
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Student #: ${profile.studentNumber}",
-                          style: const TextStyle(color: Colors.white70),
-                        ),
-                      ],
+                          const SizedBox(height: 4),
+                          Text(
+                            "${profile.firstname} ${profile.lastname}",
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Student #: ${profile.studentNumber}",
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
 
+              // ================= BODY =================
               SliverPadding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -96,7 +105,8 @@ class HomePage extends ConsumerWidget {
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
+
                     const Text(
                       "Quick Actions",
                       style: TextStyle(
@@ -104,9 +114,10 @@ class HomePage extends ConsumerWidget {
                         fontSize: 18,
                       ),
                     ),
-                    const SizedBox(height: 12),
 
-                    // ================= STACKED FEATURE CARDS =================
+                    const SizedBox(height: 16),
+
+                    // ================= FEATURE CARDS =================
                     _MobileFeatureCard(
                       title: "Courses",
                       subtitle: "View your courses",
@@ -115,6 +126,7 @@ class HomePage extends ConsumerWidget {
                       onTap: () => Navigator.pushNamed(context, '/courses'),
                     ),
                     const SizedBox(height: 12),
+
                     _MobileFeatureCard(
                       title: "Recommendations",
                       subtitle: "Check suggestions",
@@ -124,6 +136,7 @@ class HomePage extends ConsumerWidget {
                           Navigator.pushNamed(context, '/recommendations'),
                     ),
                     const SizedBox(height: 12),
+
                     _MobileFeatureCard(
                       title: "Schedule",
                       subtitle: "See your timetable",
@@ -132,6 +145,7 @@ class HomePage extends ConsumerWidget {
                       onTap: () => Navigator.pushNamed(context, '/schedule'),
                     ),
                     const SizedBox(height: 12),
+
                     _MobileFeatureCard(
                       title: "Settings",
                       subtitle: "Manage preferences",
@@ -139,15 +153,23 @@ class HomePage extends ConsumerWidget {
                       color: const Color(0xFF0055B7),
                       onTap: () => Navigator.pushNamed(context, '/settings'),
                     ),
+
                     const SizedBox(height: 32),
 
-                    // ================= NOTIFICATIONS CARD =================
+                    // ================= NOTIFICATIONS =================
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         color: const Color(0xFF0055B7),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,6 +190,7 @@ class HomePage extends ConsumerWidget {
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 32),
                   ]),
                 ),
@@ -179,6 +202,67 @@ class HomePage extends ConsumerWidget {
     );
   }
 }
+
+// ================= MISSING PROFILE =================
+
+class _MissingProfileScaffold extends ConsumerStatefulWidget {
+  const _MissingProfileScaffold();
+
+  @override
+  ConsumerState<_MissingProfileScaffold> createState() =>
+      _MissingProfileScaffoldState();
+}
+
+class _MissingProfileScaffoldState
+    extends ConsumerState<_MissingProfileScaffold> {
+  bool _isSigningOut = false;
+
+  Future<void> _signOut() async {
+    setState(() => _isSigningOut = true);
+
+    try {
+      await ref.read(authServiceProvider).signOut();
+    } finally {
+      if (mounted) {
+        setState(() => _isSigningOut = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'There seems an issue with your account.\nPlease contact administration.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _isSigningOut ? null : _signOut,
+                child: _isSigningOut
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Logout'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ================= FEATURE CARD =================
 
 class _MobileFeatureCard extends StatelessWidget {
   final String title;
@@ -199,9 +283,10 @@ class _MobileFeatureCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
 
-    return GestureDetector(
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
       onTap: onTap,
-      child: Container(
+      child: Ink(
         width: screenWidth - 32,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -223,7 +308,7 @@ class _MobileFeatureCard extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white24,
               ),

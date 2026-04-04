@@ -1,6 +1,6 @@
 // OntarioTechPlus - profile_page.dart
 
-// Profile allows the user to view and edit account information. Also allows signout
+// Profile allows the user to view and edit account information, view student card, allow signout
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ontario_tech_plus/auth/auth_providers.dart';
 import 'package:ontario_tech_plus/profile/profile_model.dart';
 import 'package:ontario_tech_plus/profile/profile_provider.dart';
+import 'package:ontario_tech_plus/profile/student_card_widget.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -112,8 +113,42 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             return _buildProfileView(context, auth, _cachedProfile!);
           }
 
-          // This is only shown if not during a signout and there is actually not profile
-          return const Center(child: Text("No profile found"));
+          // This is only shown if not during a signout and there is actually not a profile
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'There seems an issue with your account. Please contact the app developers.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: _isSigningOut
+                        ? null
+                        : () async {
+                            setState(() => _isSigningOut = true);
+                            await auth.signOut();
+                          },
+                    icon: _isSigningOut
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.logout),
+                    label: const Text("Logout"),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
         },
       ),
     );
@@ -210,6 +245,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
               ),
 
+              // Badge icon in top left of card
+              Positioned(
+                top: 6,
+                left: 6,
+                child: IconButton(
+                  tooltip: "Display student card",
+                  icon: const Icon(Icons.badge_outlined),
+                  onPressed: _showStudentCardDialog,
+                ),
+              ),
+
               // Pencil icon in top right of card
               Positioned(
                 top: 6,
@@ -228,13 +274,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
         const SizedBox(height: 12),
 
-        // Change email button below card
+        // Student card button
         OutlinedButton.icon(
-          onPressed: () {
-            _snack("Change email coming soon!");
-          },
-          icon: const Icon(Icons.email_outlined),
-          label: const Text("Change Email"),
+          onPressed: _showStudentCardDialog,
+          icon: const Icon(Icons.badge_outlined),
+          label: const Text("Display Student Card"),
         ),
 
         // Sign out button
@@ -368,12 +412,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                   )
                 else // Editting
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
                     ),
-                    child: DropdownButtonFormField<String>(
+                    leading: const Icon(Icons.account_balance),
+                    title: DropdownButtonFormField<String>(
                       initialValue: _selectedFaculty,
                       decoration: const InputDecoration(labelText: "Faculty"),
                       items: _faculties
@@ -401,12 +446,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                   )
                 else // Editting
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
                     ),
-                    child: DropdownButtonFormField<String>(
+                    leading: const Icon(Icons.calendar_today),
+                    title: DropdownButtonFormField<String>(
                       initialValue: _selectedYear,
                       decoration: const InputDecoration(labelText: "Year"),
                       items: _years
@@ -495,6 +541,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         keyboardType: keyboardType,
         decoration: InputDecoration(isDense: true, helperText: helperText),
       ),
+    );
+  }
+
+  // Display for student card using the student_card_widget
+  Future<void> _showStudentCardDialog() {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => const StudentCardDialog(),
     );
   }
 
