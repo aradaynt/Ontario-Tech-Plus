@@ -1,6 +1,6 @@
 // OntarioTechPlus - ShellPage
 
-// This page is what allows the navbar at the bottom, and makes it so page changes look seemless (no transitions)
+// This page is what allows the navbar at the bottom, and makes it so page changes look seamless (no transitions)
 
 // NOTE: The nav bar naming is handled in core/global_widgets/app_bottom_navbar.dart
 
@@ -12,6 +12,7 @@ import 'package:ontario_tech_plus/core/global_widgets/app_bottom_navbar.dart';
 
 import 'package:ontario_tech_plus/home/home_page.dart';
 import 'package:ontario_tech_plus/booking/booking_page.dart';
+import 'package:ontario_tech_plus/home/search_page.dart';
 import 'package:ontario_tech_plus/schedule/schedule_page.dart';
 import 'package:ontario_tech_plus/maps/maps.dart';
 
@@ -30,6 +31,7 @@ class ShellPage extends ConsumerWidget {
       BookingPage(),
       SchedulePage(),
       MapsPage(),
+      SearchPage(),
     ];
 
     return Scaffold(

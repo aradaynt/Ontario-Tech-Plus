@@ -1,121 +1,178 @@
-// OntarioTechPlus - home_page.dart
-
-// This is the main dashboard page that displays the users name, student number
-// and provides navigation to main sections of the app.
-
+// OntarioTechPlus - home_page
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ontario_tech_plus/profile/profile_provider.dart';
+import 'package:ontario_tech_plus/home/app_drawer.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // get the profile data, and will reactively rebuild on changes (Currently housed in user_provider.dart)
     final profileAsync = ref.watch(profileProvider);
 
-    // Handle loading, error and data states
     return profileAsync.when(
-      // Show a spinner when loading profile data
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-
-      // Show error message if profile cant be loaded
-      error: (error, _) => Scaffold(
+      error: (_, __) => const Scaffold(
         body: Center(
           child: Text(
             "Error loading profile",
-            style: const TextStyle(color: Colors.red),
+            style: TextStyle(color: Colors.red),
           ),
         ),
       ),
-
-      // Profile load success
       data: (profile) {
-        // If no profile data found
         if (profile == null) {
           return const Scaffold(body: Center(child: Text("No profile found")));
         }
 
-        // ================== Build the page ======================
         return Scaffold(
-          appBar: AppBar(
-            title: const Text("Dashboard"),
-            actions: [
-              // Go to profile
-              IconButton(
-                icon: const Icon(Icons.person),
-                onPressed: () {
-                  Navigator.pushNamed(context, '/profile');
-                },
+          drawer: const AppDrawer(),
+          body: CustomScrollView(
+            slivers: [
+              // ================= COLLAPSIBLE HEADER WITHOUT STATIC TITLE =================
+              SliverAppBar(
+                pinned: true,
+                expandedHeight: 180,
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                leading: Builder(
+                  builder: (context) => IconButton(
+                    icon: const Icon(Icons.menu, color: Colors.white),
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                  ),
+                ),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.person, color: Colors.white),
+                    onPressed: () => Navigator.pushNamed(context, '/profile'),
+                  ),
+                ],
+                flexibleSpace: FlexibleSpaceBar(
+                  collapseMode: CollapseMode.parallax,
+                  background: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF0055B7), Color(0xFF00AEEF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Welcome back,",
+                          style: TextStyle(color: Colors.white70, fontSize: 16),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "${profile.firstname} ${profile.lastname}",
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Student #: ${profile.studentNumber}",
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Quick Actions",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // ================= STACKED FEATURE CARDS =================
+                    _MobileFeatureCard(
+                      title: "Courses",
+                      subtitle: "View your courses",
+                      icon: Icons.book,
+                      color: const Color(0xFF0055B7),
+                      onTap: () => Navigator.pushNamed(context, '/courses'),
+                    ),
+                    const SizedBox(height: 12),
+                    _MobileFeatureCard(
+                      title: "Recommendations",
+                      subtitle: "Check suggestions",
+                      icon: Icons.grade,
+                      color: const Color(0xFF00AEEF),
+                      onTap: () =>
+                          Navigator.pushNamed(context, '/recommendations'),
+                    ),
+                    const SizedBox(height: 12),
+                    _MobileFeatureCard(
+                      title: "Schedule",
+                      subtitle: "See your timetable",
+                      icon: Icons.schedule,
+                      color: const Color(0xFFFF6F00),
+                      onTap: () => Navigator.pushNamed(context, '/schedule'),
+                    ),
+                    const SizedBox(height: 12),
+                    _MobileFeatureCard(
+                      title: "Settings",
+                      subtitle: "Manage preferences",
+                      icon: Icons.settings,
+                      color: const Color(0xFF0055B7),
+                      onTap: () => Navigator.pushNamed(context, '/settings'),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // ================= NOTIFICATIONS CARD =================
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        color: const Color(0xFF0055B7),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            "Notifications",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            "No new notifications",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                  ]),
+                ),
               ),
             ],
-          ),
-
-          // Main body with padding
-          body: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ================== Welcome Section ======================
-                Text(
-                  "Welcome ${profile.firstname} ${profile.lastname} 👋",
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  "Student Number: ${profile.studentNumber}",
-                  style: const TextStyle(fontSize: 16),
-                ),
-
-                const SizedBox(height: 30),
-
-                // ================== Navigation Cards ======================
-                Expanded(
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    children: [
-                      _MenuCard(
-                        icon: Icons.book,
-                        title: "Courses",
-                        onTap: () {
-                          Navigator.pushNamed(context, '/courses');
-                        },
-                      ),
-                      _MenuCard(
-                        icon: Icons.grade,
-                        title: "Club Recommendations",
-                        onTap: () {
-                          Navigator.pushNamed(context, '/recommendations');
-                        },
-                      ),
-                      _MenuCard(
-                        icon: Icons.schedule,
-                        title: "Schedule",
-                        onTap: () {
-                          Navigator.pushNamed(context, '/schedule');
-                        },
-                      ),
-                      _MenuCard(
-                        icon: Icons.settings,
-                        title: "Settings",
-                        onTap: () {
-                          Navigator.pushNamed(context, '/settings');
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ),
         );
       },
@@ -123,37 +180,77 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-// ================== Reusable Menu Card Widget ======================
-
-class _MenuCard extends StatelessWidget {
-  final IconData icon;
+class _MobileFeatureCard extends StatelessWidget {
   final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
   final VoidCallback onTap;
 
-  const _MenuCard({
-    required this.icon,
+  const _MobileFeatureCard({
     required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Ink(
+      child: Container(
+        width: screenWidth - 32,
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: Theme.of(context).colorScheme.primaryContainer,
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            colors: [color.withOpacity(0.85), color.withOpacity(0.6)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
           children: [
-            Icon(icon, size: 40),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white24,
+              ),
+              child: Icon(icon, size: 36, color: Colors.white),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: const TextStyle(color: Colors.white70)),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white70,
+              size: 18,
             ),
           ],
         ),

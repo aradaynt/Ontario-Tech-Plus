@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Font size options (single source of truth)
+/// Font size options
 enum FontSizeOption { small, medium, large, extraLarge }
 
 class SettingsState {

@@ -1,4 +1,5 @@
-// OntarioTechPlus - settings_page.dart
+// OntarioTechPlus - settings_page
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ontario_tech_plus/theme/theme_provider.dart';
@@ -12,18 +13,36 @@ class SettingsPage extends ConsumerWidget {
     final theme = ref.watch(themeProvider);
     final settings = ref.watch(settingsProvider);
 
-    // Helper for preview text size
-    TextStyle previewStyle() {
-      switch (settings.fontSize) {
-        case FontSizeOption.small:
-          return Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 14);
-        case FontSizeOption.medium:
-          return Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 16);
-        case FontSizeOption.large:
-          return Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 18);
-        case FontSizeOption.extraLarge:
-          return Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 20);
+    //Style helper
+    TextStyle safeStyle(TextStyle? base, double size) {
+      if (base == null) {
+        return TextStyle(fontSize: size);
       }
+
+      // If base.fontSize is null, replace instead of copy
+      if (base.fontSize == null) {
+        return TextStyle(
+          fontSize: size,
+          color: base.color,
+          fontWeight: base.fontWeight,
+        );
+      }
+
+      return base.copyWith(fontSize: size);
+    }
+
+    // Preview style
+    TextStyle previewStyle() {
+      final base = Theme.of(context).textTheme.bodyMedium;
+
+      final size = switch (settings.fontSize) {
+        FontSizeOption.small => 14.0,
+        FontSizeOption.medium => 16.0,
+        FontSizeOption.large => 18.0,
+        FontSizeOption.extraLarge => 20.0,
+      };
+
+      return safeStyle(base, size);
     }
 
     return Scaffold(
@@ -31,12 +50,12 @@ class SettingsPage extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          /// ================= Appearance =================
           const Text(
             "Appearance",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
+
           DropdownButton<AppThemeMode>(
             value: theme,
             isExpanded: true,
@@ -53,18 +72,20 @@ class SettingsPage extends ConsumerWidget {
               ),
             ],
             onChanged: (mode) {
-              if (mode != null) ref.read(themeProvider.notifier).setTheme(mode);
+              if (mode != null) {
+                ref.read(themeProvider.notifier).setTheme(mode);
+              }
             },
           ),
 
           const Divider(height: 40),
 
-          /// ================= Accessibility =================
           const Text(
             "Accessibility",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
+
           DropdownButton<FontSizeOption>(
             value: settings.fontSize,
             isExpanded: true,
@@ -91,20 +112,23 @@ class SettingsPage extends ConsumerWidget {
               ),
             ],
             onChanged: (size) {
-              if (size != null)
+              if (size != null) {
                 ref.read(settingsProvider.notifier).setFontSize(size);
+              }
             },
           ),
+
           const SizedBox(height: 10),
+
           Text("Preview text size", style: previewStyle()),
 
           const Divider(height: 40),
 
-          /// ================= Notifications =================
           const Text(
             "Notifications",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
+
           SwitchListTile(
             secondary: const Icon(Icons.school, color: Color(0xFF003C71)),
             title: const Text("Course Updates"),
@@ -116,6 +140,7 @@ class SettingsPage extends ConsumerWidget {
                   .toggleCourseNotifications(value);
             },
           ),
+
           SwitchListTile(
             secondary: const Icon(Icons.recommend, color: Color(0xFFE75D2A)),
             title: const Text("Recommendation Alerts"),
@@ -130,11 +155,11 @@ class SettingsPage extends ConsumerWidget {
 
           const Divider(height: 40),
 
-          /// ================= Account =================
           const Text(
             "Account",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
+
           ListTile(
             leading: const Icon(Icons.person, color: Color(0xFF003C71)),
             title: const Text("Edit Profile"),
@@ -144,16 +169,17 @@ class SettingsPage extends ConsumerWidget {
 
           const Divider(height: 40),
 
-          /// ================= About =================
           const Text(
             "About",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
+
           const ListTile(
             leading: Icon(Icons.info, color: Color(0xFF0077CA)),
             title: Text("OntarioTechPlus"),
             subtitle: Text("Version 1.0.0"),
           ),
+
           const SizedBox(height: 40),
         ],
       ),
