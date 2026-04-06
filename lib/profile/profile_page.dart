@@ -4,8 +4,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:ontario_tech_plus/auth/auth_providers.dart';
+import 'package:ontario_tech_plus/profile/image_upload_widget.dart';
 import 'package:ontario_tech_plus/profile/profile_model.dart';
 import 'package:ontario_tech_plus/profile/profile_provider.dart';
 import 'package:ontario_tech_plus/profile/student_card_widget.dart';
@@ -24,6 +26,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   bool _isEditing = false;
   // Track whether the user is currently saving the editted profile
   bool _isSaving = false;
+  // Track whether the user is uploading a new profile photo
+  bool _isUploadingPhoto = false;
 
   // Cache for profile page.
   // Makes it so that the profile data stays during logout for visual affect
@@ -87,10 +91,39 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             return _buildProfileView(context, auth, _cachedProfile!);
           }
           // If there is an error loading data at all, print error
-          return const Center(
-            child: Text(
-              "Error loading profile",
-              style: TextStyle(color: Colors.red),
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "Error loading profile",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: (_isSigningOut || _isUploadingPhoto)
+                        ? null
+                        : () async {
+                            setState(() => _isSigningOut = true);
+                            await auth.signOut();
+                          },
+                    icon: _isSigningOut
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.logout),
+                    label: const Text("Logout"),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -127,7 +160,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                   const SizedBox(height: 16),
                   OutlinedButton.icon(
-                    onPressed: _isSigningOut
+                    onPressed: (_isSigningOut || _isUploadingPhoto)
                         ? null
                         : () async {
                             setState(() => _isSigningOut = true);
@@ -156,7 +189,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   // Helper to toggle edit mode for the page
   void _toggleEdit(Profile profile) {
-    if (_isSigningOut || _isSaving) return;
+    if (_isSigningOut || _isSaving || _isUploadingPhoto) return;
 
     if (_isEditing) {
       // Cancel edit
@@ -212,9 +245,67 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Profile icon top center
-                      CircleAvatar(
-                        radius: 34,
-                        child: const Icon(Icons.person, size: 34),
+                      GestureDetector(
+                        onTap: _isEditing && !_isUploadingPhoto
+                            ? () => _showProfileImageSelector(profile)
+                            : null,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.center,
+                          children: [
+                            CircleAvatar(
+                              radius: 34,
+                              backgroundImage: _buildProfileImage(profile),
+                              child: profile.profileImageUrl == null
+                                  ? const Icon(Icons.person, size: 34)
+                                  : null,
+                            ),
+                            if (_isUploadingPhoto)
+                              Container(
+                                width: 68,
+                                height: 68,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.35),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.2,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (_isEditing)
+                              Positioned(
+                                right: -2,
+                                bottom: -2,
+                                child: Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Theme.of(context).cardColor,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.edit,
+                                    size: 14,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimary,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
 
                       const SizedBox(height: 12),
@@ -263,7 +354,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 child: IconButton(
                   tooltip: _isEditing ? "Cancel edit" : "Edit profile",
                   icon: Icon(_isEditing ? Icons.close : Icons.edit),
-                  onPressed: (_isSigningOut || _isSaving)
+                  onPressed: (_isSigningOut || _isSaving || _isUploadingPhoto)
                       ? null
                       : () => _toggleEdit(profile),
                 ),
@@ -283,7 +374,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
         // Sign out button
         OutlinedButton.icon(
-          onPressed: (_isSigningOut || _isSaving)
+          onPressed: (_isSigningOut || _isSaving || _isUploadingPhoto)
               ? null
               : () async {
                   setState(() => _isSigningOut = true);
@@ -481,7 +572,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               // Cancel button
               Expanded(
                 child: OutlinedButton(
-                  onPressed: (_isSaving || _isSigningOut)
+                  onPressed: (_isSaving || _isSigningOut || _isUploadingPhoto)
                       ? null
                       : () {
                           setState(() => _isEditing = false);
@@ -496,7 +587,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               // Save button
               Expanded(
                 child: ElevatedButton(
-                  onPressed: (_isSaving || _isSigningOut)
+                  onPressed: (_isSaving || _isSigningOut || _isUploadingPhoto)
                       ? null
                       : () async {
                           await _saveEdits(profile);
@@ -550,6 +641,73 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       context: context,
       builder: (_) => const StudentCardDialog(),
     );
+  }
+
+  // Builds the profile image provider
+  ImageProvider? _buildProfileImage(Profile profile) {
+    final profileImageUrl = profile.profileImageUrl;
+    if (profileImageUrl == null || profileImageUrl.isEmpty) {
+      return null;
+    }
+
+    return NetworkImage(profileImageUrl);
+  }
+
+  // Opens the popup for selecting, verifying, and uploading profile photo
+  Future<void> _showProfileImageSelector(Profile currentProfile) async {
+    if (!_isEditing || _isSaving || _isSigningOut || _isUploadingPhoto) return;
+
+    await showProfileImageUploadDialog(
+      context: context,
+      isAllowedFileType: _isAllowedProfileImageType,
+      onUsePhoto: (imageFile) => _uploadProfileImage(currentProfile, imageFile),
+    );
+  }
+
+  // Uploads selected profile photo and updates the cached profile image in UI
+  Future<bool> _uploadProfileImage(
+    Profile currentProfile,
+    XFile selectedImage,
+  ) async {
+    if (!_isEditing || _isSaving || _isSigningOut || _isUploadingPhoto) {
+      return false;
+    }
+    if (!_isAllowedProfileImageType(selectedImage.path)) {
+      _snack("Profile image must be a JPG or PNG file.");
+      return false;
+    }
+
+    setState(() => _isUploadingPhoto = true);
+
+    try {
+      final profileImageUrl = await ref
+          .read(profileActionsProvider)
+          .uploadProfilePhoto(selectedImage);
+
+      if (!mounted) return false;
+
+      setState(() {
+        _cachedProfile = Profile(
+          firstname: currentProfile.firstname,
+          lastname: currentProfile.lastname,
+          email: currentProfile.email,
+          studentNumber: currentProfile.studentNumber,
+          program: currentProfile.program,
+          faculty: currentProfile.faculty,
+          year: currentProfile.year,
+          profileImageUrl: profileImageUrl,
+        );
+      });
+
+      return true;
+    } catch (e) {
+      _snack("Profile photo could not be updated.");
+      return false;
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingPhoto = false);
+      }
+    }
   }
 
   // Function to handle saving the edits made
@@ -607,6 +765,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           program: program,
           faculty: _selectedFaculty!,
           year: _selectedYear!,
+          profileImageUrl: currentProfile.profileImageUrl,
         );
         _isEditing = false; // Set iseditting to false
       });
@@ -633,6 +792,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       return "Student number must be exactly 9 digits.";
     }
     return null;
+  }
+
+  // Allowed image types
+  bool _isAllowedProfileImageType(String path) {
+    final lowercasePath = path.toLowerCase();
+    return lowercasePath.endsWith('.jpg') ||
+        lowercasePath.endsWith('.jpeg') ||
+        lowercasePath.endsWith('.png');
   }
 
   // Helper function to take supabase jargon and turn it into user friendly message
