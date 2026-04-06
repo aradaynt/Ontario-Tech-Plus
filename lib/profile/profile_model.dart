@@ -10,6 +10,7 @@ class Profile {
   final String program;
   final String faculty;
   final String year;
+  final String? profileImageUrl;
 
   const Profile({
     required this.firstname,
@@ -19,6 +20,7 @@ class Profile {
     required this.program,
     required this.faculty,
     required this.year,
+    this.profileImageUrl,
   });
 
   String get fullName => "$firstname $lastname";
@@ -32,6 +34,7 @@ class Profile {
       program: map['program'] as String,
       faculty: map['faculty'] as String,
       year: map['year'] as String,
+      profileImageUrl: map['profile_image_url'] as String?,
     );
   }
 }
