@@ -388,18 +388,44 @@ class ViewCoursePage extends ConsumerWidget {
     );
   }
 
-  // Build the instructor summary text for the course header
+  // Build course instructor label
   String _courseInstructorLabel(EnrolledCourse course) {
-    final names =
+    final lectureProfessorNames =
         course.sections
-            .map((section) => section.displayinstructor.trim())
-            .where((name) => name.isNotEmpty && name != 'TBA')
+            .where(
+              (section) =>
+                  section.scheduleType.trim().toLowerCase() == 'lecture',
+            )
+            .expand((section) => section.instructors)
+            .where(
+              (instructor) =>
+                  instructor.type.trim().toLowerCase() == 'professor',
+            )
+            .map((instructor) => instructor.name.trim())
+            .where((name) => name.isNotEmpty)
             .toSet()
             .toList()
           ..sort();
 
-    if (names.isEmpty) return 'TBA';
-    return names.join(', ');
+    if (lectureProfessorNames.isNotEmpty) {
+      return lectureProfessorNames.join(', ');
+    }
+
+    final professorNames =
+        course.sections
+            .expand((section) => section.instructors)
+            .where(
+              (instructor) =>
+                  instructor.type.trim().toLowerCase() == 'professor',
+            )
+            .map((instructor) => instructor.name.trim())
+            .where((name) => name.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+
+    if (professorNames.isEmpty) return 'TBA';
+    return professorNames.join(', ');
   }
 
   // Show fallback text when a staff field is missing
