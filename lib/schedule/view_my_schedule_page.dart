@@ -30,8 +30,8 @@ class ViewMySchedulePage extends ConsumerWidget {
           if (appointments.isEmpty) {
             return const Center(
               child: Text(
-                "No scheduled meetings found yet.",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                "Enroll in courses to see schedule",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             );
           }

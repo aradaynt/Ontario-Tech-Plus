@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ontario_tech_plus/core/global_providers/nav_tab_provider.dart';
 import 'package:ontario_tech_plus/core/global_widgets/app_bottom_navbar.dart';
+import 'package:ontario_tech_plus/profile/profile_provider.dart';
 
 import 'package:ontario_tech_plus/home/home_page.dart';
 import 'package:ontario_tech_plus/booking/booking_page.dart';
@@ -23,6 +24,8 @@ class ShellPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(tabIndexProvider);
+    // Used to hide the nav bar if the signed in user has no profile (Error state)
+    final profileAsync = ref.watch(profileProvider);
 
     final pages = const [
       HomePage(),
@@ -34,9 +37,19 @@ class ShellPage extends ConsumerWidget {
 
     return Scaffold(
       body: IndexedStack(index: index, children: pages),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: index,
-        onTap: (i) => ref.read(tabIndexProvider.notifier).setIndex(i),
+
+      // Logic to hide or show nav bar based on non-broken user
+      bottomNavigationBar: profileAsync.maybeWhen(
+        data: (profile) => profile == null
+            ? null
+            : AppBottomNav(
+                currentIndex: index,
+                onTap: (i) => ref.read(tabIndexProvider.notifier).setIndex(i),
+              ),
+        orElse: () => AppBottomNav(
+          currentIndex: index,
+          onTap: (i) => ref.read(tabIndexProvider.notifier).setIndex(i),
+        ),
       ),
     );
   }

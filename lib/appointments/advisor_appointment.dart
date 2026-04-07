@@ -4,7 +4,8 @@ import 'package:ontario_tech_plus/appointments/week_selector.dart';
 import '../student.dart';
 
 class AdvisorAppointmentPage extends StatefulWidget {
-  const AdvisorAppointmentPage({super.key});
+  final Student student;
+  const AdvisorAppointmentPage({super.key, required this.student});
 
   @override
   State<AdvisorAppointmentPage> createState() => _AdvisorAppointmentPageState();
@@ -21,33 +22,13 @@ class _AdvisorAppointmentPageState extends State<AdvisorAppointmentPage> {
   @override
   void initState() {
     super.initState();
+    student1 = widget.student;
     _fetchAdvisorData();
   }
 
   Future<void> _fetchAdvisorData() async {
     try {
       final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-
-      if (user == null) {
-        throw Exception("User is not logged in!");
-      }
-
-      final profileResponse = await supabase
-          .from('profiles')
-          .select()
-          .eq('id', user.id)
-          .single();
-
-      student1 = Student(
-        name: "${profileResponse['firstname']} ${profileResponse['lastname']}",
-        studentid: int.parse(profileResponse['student_number'].toString()),
-        email: profileResponse['email'],
-        program: profileResponse['program'],
-        faculty: profileResponse['faculty'],
-        year: int.parse(profileResponse['year'].toString()),
-        courses: [],
-      );
 
       final advisorResponse = await supabase
           .from('advisors')
@@ -236,7 +217,10 @@ class _AdvisorAppointmentPageState extends State<AdvisorAppointmentPage> {
                         padding: const EdgeInsets.all(8.0),
                         child: Text(
                           time.toString(),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
                         ),
                       ),
                     ),

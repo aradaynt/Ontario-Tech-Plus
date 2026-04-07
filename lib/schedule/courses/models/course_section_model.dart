@@ -12,6 +12,7 @@ class CourseSection {
   final DateTime endDate; // When it ends
   final String? primaryInstructorName; // primary prof names
   final List<String> allInstructorNames; // All prof names for course section
+  final List<SectionInstructor> instructors; // Rich instructor details
   final List<SectionMeeting>
   meetings; // Course meetings (Lectures, Labs, Tutorials)
 
@@ -26,6 +27,7 @@ class CourseSection {
     required this.meetings, // Meeting times (Lec, lab, tut)
     required this.primaryInstructorName, // main Instructors name
     required this.allInstructorNames, // All instructors assositated with section
+    required this.instructors, // Instructors with role/contact/office hour data
   });
 
   // Create a base courseselection. Meetings empty, instructors null
@@ -41,6 +43,7 @@ class CourseSection {
       meetings: <SectionMeeting>[],
       primaryInstructorName: null,
       allInstructorNames: const [],
+      instructors: const [],
     );
   }
 
@@ -52,14 +55,8 @@ class CourseSection {
     final secInstructRaw = (map['section_instructors'] as List?) ?? const [];
     final instructors = secInstructRaw
         .map((x) => (x as Map).cast<String, dynamic>())
-        .map((secInstructor) {
-          final instructor = (secInstructor['instructor'] as Map?)
-              ?.cast<String, dynamic>();
-          final name = (instructor?['name'] as String?)?.trim();
-          final role = (secInstructor['role'] as String?)?.trim();
-          return _InstructorRow(name: name, role: role);
-        })
-        .where((r) => r.name != null && r.name!.isNotEmpty)
+        .map(SectionInstructor.fromMap)
+        .where((r) => r.name.isNotEmpty)
         .toList();
 
     // Detrmine primary instructor for display
@@ -72,7 +69,7 @@ class CourseSection {
     }
 
     // Build sorted list of all instructors (if multiple)
-    final allNames = instructors.map((r) => r.name!).toSet().toList()
+    final allNames = instructors.map((r) => r.name).toSet().toList()
       ..sort((a, b) => a.compareTo(b));
 
     // Construct the CourseSection with meetings parsed
@@ -91,6 +88,7 @@ class CourseSection {
           .toList(),
       primaryInstructorName: primary,
       allInstructorNames: allNames,
+      instructors: instructors,
     );
   }
 
@@ -102,11 +100,91 @@ class CourseSection {
   }
 }
 
-// Internal helper for parsing
-class _InstructorRow {
-  final String? name;
-  final String? role;
-  _InstructorRow({required this.name, required this.role});
+class SectionInstructor {
+  final int? sectionInstructorId;
+  final int? instructorId;
+  final String name;
+  final String role;
+  final String type;
+  final String email;
+  final String faculty;
+  final String office;
+  final List<InstructorOfficeHour> officeHours;
+
+  const SectionInstructor({
+    required this.sectionInstructorId,
+    required this.instructorId,
+    required this.name,
+    required this.role,
+    required this.type,
+    required this.email,
+    required this.faculty,
+    required this.office,
+    required this.officeHours,
+  });
+
+  factory SectionInstructor.fromMap(Map<String, dynamic> map) {
+    final instructor =
+        (map['instructor'] as Map?)?.cast<String, dynamic>() ?? {};
+    final officeHoursRaw = (map['office_hours'] as List?) ?? const [];
+
+    return SectionInstructor(
+      sectionInstructorId: (map['id'] as num?)?.toInt(),
+      instructorId: (instructor['id'] as num?)?.toInt(),
+      name: (instructor['name'] as String?)?.trim() ?? '',
+      role: (map['role'] as String?)?.trim() ?? '',
+      type: (instructor['type'] as String?)?.trim() ?? '',
+      email: (instructor['email'] as String?)?.trim() ?? '',
+      faculty: (instructor['faculty'] as String?)?.trim() ?? '',
+      office: (instructor['office'] as String?)?.trim() ?? '',
+      officeHours: officeHoursRaw
+          .map((row) => InstructorOfficeHour.fromMap((row as Map).cast<String, dynamic>()))
+          .toList(),
+    );
+  }
+
+  String get displayRole {
+    final normalizedType = type.toLowerCase();
+    if (normalizedType == 'ta') return 'TA';
+    if (normalizedType == 'professor') return 'Professor';
+    if (normalizedType == 'instructor') return 'Instructor';
+
+    final normalizedRole = role.toLowerCase();
+    if (normalizedRole == 'primary') return 'Professor';
+    if (normalizedRole == 'ta') return 'TA';
+
+    if (role.isNotEmpty) return role;
+    if (type.isNotEmpty) return type;
+    return 'Instructor';
+  }
+}
+
+class InstructorOfficeHour {
+  final String day;
+  final String start;
+  final String end;
+
+  const InstructorOfficeHour({
+    required this.day,
+    required this.start,
+    required this.end,
+  });
+
+  factory InstructorOfficeHour.fromMap(Map<String, dynamic> map) {
+    return InstructorOfficeHour(
+      day: (map['day'] as String?)?.trim() ?? '',
+      start: (map['start'] as String?)?.trim() ?? '',
+      end: (map['end'] as String?)?.trim() ?? '',
+    );
+  }
+
+  String get displayRange {
+    final startText = start.length >= 5 ? start.substring(0, 5) : start;
+    final endText = end.length >= 5 ? end.substring(0, 5) : end;
+    if (day.isEmpty && startText.isEmpty && endText.isEmpty) return 'TBA';
+    if (day.isEmpty) return '$startText-$endText';
+    return '$day $startText-$endText';
+  }
 }
 
 // One schedueld meeting occurance for a section

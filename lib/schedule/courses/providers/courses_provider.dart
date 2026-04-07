@@ -11,6 +11,46 @@ import 'package:ontario_tech_plus/core/global_providers/user_provider.dart';
 import 'package:ontario_tech_plus/schedule/courses/models/course_section_model.dart';
 import 'package:ontario_tech_plus/schedule/courses/models/enrolled_courses_model.dart';
 import 'package:ontario_tech_plus/schedule/courses/models/course_model.dart';
+import 'package:ontario_tech_plus/core/widget_manager.dart';
+
+// Office building option loaded from the database
+class OfficeBuilding {
+  final int id;
+  final String name;
+  final String shortname;
+
+  const OfficeBuilding({
+    required this.id,
+    required this.name,
+    required this.shortname,
+  });
+}
+
+// Office room option loaded from the database
+class OfficeRoom {
+  final int id;
+  final int buildingId;
+  final String roomCode;
+
+  const OfficeRoom({
+    required this.id,
+    required this.buildingId,
+    required this.roomCode,
+  });
+}
+
+// Office hour input used when saving staff details
+class StaffOfficeHourInput {
+  final String day;
+  final String start;
+  final String end;
+
+  const StaffOfficeHourInput({
+    required this.day,
+    required this.start,
+    required this.end,
+  });
+}
 
 // Stores currently selectedsubject filter for all courses
 final courseSubjectFilterProvider =
@@ -21,7 +61,11 @@ final courseSubjectFilterProvider =
 class CourseSubjectFilterNotifier extends Notifier<String?> {
   @override
   String? build() => null; // null = All
+
+  // Set the selected subject filter
   void setFilter(String? value) => state = value;
+
+  // Clear the selected subject filter
   void clear() => state = null;
 }
 
@@ -52,7 +96,11 @@ final courseTermFilterProvider =
 class CourseTermFilterNotifier extends Notifier<String?> {
   @override
   String? build() => null; // null = All
+
+  // Set the selected term filter
   void setTerm(String? value) => state = value;
+
+  // Clear the selected term filter
   void clear() => state = null;
 }
 
@@ -119,6 +167,73 @@ final courseSubjectOptionsProvider =
       });
     });
 
+final officeBuildingsProvider = FutureProvider<List<OfficeBuilding>>((
+  ref,
+) async {
+  final supabase = ref.read(supabaseProvider);
+
+  final rows = await supabase
+      .from('building')
+      .select('building_id, name, shortname')
+      .order('shortname', ascending: true);
+
+  return (rows as List).map((row) {
+    final map = (row as Map).cast<String, dynamic>();
+    return OfficeBuilding(
+      id: (map['building_id'] as num).toInt(),
+      name: (map['name'] as String?)?.trim() ?? '',
+      shortname: (map['shortname'] as String?)?.trim() ?? '',
+    );
+  }).toList();
+});
+
+final officeRoomsByBuildingProvider =
+    FutureProvider.family<List<OfficeRoom>, int>((ref, buildingId) async {
+      final supabase = ref.read(supabaseProvider);
+
+      final rows = await supabase
+          .from('rooms')
+          .select('room_id, building_id, room_code')
+          .eq('building_id', buildingId)
+          .order('room_code', ascending: true);
+
+      return (rows as List).map((row) {
+        final map = (row as Map).cast<String, dynamic>();
+        return OfficeRoom(
+          id: (map['room_id'] as num).toInt(),
+          buildingId: (map['building_id'] as num).toInt(),
+          roomCode: (map['room_code'] as String?)?.trim() ?? '',
+        );
+      }).toList();
+    });
+
+final enrolledCourseCanvasIdProvider = FutureProvider.family<String?, int>((
+  ref,
+  courseId,
+) async {
+  final supabase = ref.read(supabaseProvider);
+  final user = ref.read(currentUserProvider);
+  if (user == null) return null;
+
+  final rows = await supabase
+      .from('student_enrolled_courses')
+      .select('canvas_course_id')
+      .eq('user_id', user.id)
+      .eq('course_id', courseId)
+      .limit(1);
+
+  if ((rows as List).isEmpty) return null;
+
+  final row = (rows.first as Map).cast<String, dynamic>();
+  return (row['canvas_course_id'] as String?)?.trim();
+});
+
+final canvasCourseLinkProvider = Provider.family<String?, String?>((ref, id) {
+  final trimmed = id?.trim() ?? '';
+  if (trimmed.isEmpty) return null;
+  return 'https://learn.ontariotechu.ca/courses/$trimmed';
+});
+
 // =============== Fetch all course sections ===============
 
 /// Fetch sections for a given course_id (includes meetings, room/building and instructor(s))
@@ -133,8 +248,12 @@ final courseSectionsProvider = FutureProvider.family<List<CourseSection>, int>((
       .select('''
         id, crn, section, schedule_type, campus, start_date, end_date,
         section_instructors (
+          id,
           role,
-          instructor ( name )
+          instructor ( id, name, email, type, faculty, office ),
+          office_hours (
+            day, start, end
+          )
         ),
 
         course_schedule (
@@ -161,10 +280,12 @@ final enrollInSectionsProvider = Provider<SectionEnrollmentService>((ref) {
   return SectionEnrollmentService(ref);
 });
 
+// Service for enrolling a student in a course and its sections
 class SectionEnrollmentService {
   final Ref ref;
   SectionEnrollmentService(this.ref);
 
+  // Enroll the current user in the selected course sections
   Future<void> enrollSections({
     required int courseId,
     required List<int> sectionIds,
@@ -181,11 +302,62 @@ class SectionEnrollmentService {
       throw Exception('Select at least one section.');
     }
 
+    final availableSections = await ref.read(
+      courseSectionsProvider(courseId).future,
+    );
+    final selectedSections = availableSections
+        .where((section) => sectionIds.contains(section.id))
+        .toList();
+
+    if (selectedSections.length != sectionIds.length) {
+      throw Exception('Some selected course sections could not be loaded.');
+    }
+
+    final enrolledCourses = await ref.read(myEnrolledCoursesProvider.future);
+
+    final selectedConflict = _findFirstConflict(
+      selectedSections,
+      _sectionContextForNewCourse,
+    );
+    if (selectedConflict != null) {
+      throw ScheduleConflictException(selectedConflict);
+    }
+
+    final existingConflict = _findConflictAgainstExisting(
+      selectedSections: selectedSections,
+      existingCourses: enrolledCourses
+          .where((course) => course.courseId != courseId)
+          .toList(),
+    );
+    if (existingConflict != null) {
+      throw ScheduleConflictException(existingConflict);
+    }
+
     // Get the current enrolled courses
     await supabase.from('student_enrolled_courses').upsert({
       'user_id': user.id,
       'course_id': courseId,
     }, onConflict: 'user_id,course_id');
+
+    // Replace any previously saved section choices for this course so
+    // "My Courses" reflects only the selections made in the current enroll flow.
+    final sectionRows = await supabase
+        .from('course_sections')
+        .select('id')
+        .eq('course_id', courseId);
+
+    final courseSectionIds = (sectionRows as List)
+        .map((e) => (e as Map)['id'])
+        .whereType<int>()
+        .toList();
+
+    if (courseSectionIds.isNotEmpty) {
+      await supabase
+          .from('student_enrolled_sections')
+          .delete()
+          .eq('user_id', user.id)
+          .inFilter('section_id', courseSectionIds);
+    }
 
     // Insert section enrollments
     final payload = sectionIds
@@ -199,7 +371,201 @@ class SectionEnrollmentService {
 
     // Invalidate the enrolled courses provider to cause my courses to refresh (and drop course)
     ref.invalidate(myEnrolledCoursesProvider);
+
+    // Update the home widget
+    await WidgetManager.updateNextClassWidget();
   }
+}
+
+// Find the first conflict between the selected sections
+String? _findFirstConflict(
+  List<CourseSection> sections,
+  _SectionContext Function(CourseSection section) contextBuilder,
+) {
+  for (var i = 0; i < sections.length; i++) {
+    for (var j = i + 1; j < sections.length; j++) {
+      final overlap = _firstOverlapDetail(sections[i], sections[j]);
+      if (overlap != null) {
+        final first = contextBuilder(sections[i]);
+        final second = contextBuilder(sections[j]);
+        return [
+          'Selected sections overlap:',
+          '- ${first.label}',
+          '- ${second.label}',
+          '- Shared time: ${overlap.summary}',
+        ].join('\n');
+      }
+    }
+  }
+
+  return null;
+}
+
+// Find the first conflict between new selections and existing enrolled courses
+String? _findConflictAgainstExisting({
+  required List<CourseSection> selectedSections,
+  required List<EnrolledCourse> existingCourses,
+}) {
+  for (final selected in selectedSections) {
+    for (final course in existingCourses) {
+      for (final existing in course.sections) {
+        final overlap = _firstOverlapDetail(selected, existing);
+        if (overlap != null) {
+          final newSection = _sectionContextForNewCourse(selected);
+          final currentSection = _SectionContext(
+            label:
+                '${course.courseCode} ${existing.scheduleType} ${existing.section}',
+          );
+          return [
+            'Schedule conflict:',
+            '- ${newSection.label}',
+            '- ${currentSection.label}',
+            '- Shared time: ${overlap.summary}',
+          ].join('\n');
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+// Build the display label for a newly selected section
+_SectionContext _sectionContextForNewCourse(CourseSection section) {
+  return _SectionContext(
+    label: 'This Course ${section.scheduleType} ${section.section}',
+  );
+}
+
+// Find the first overlapping meeting detail between two sections
+_OverlapDetail? _firstOverlapDetail(CourseSection a, CourseSection b) {
+  if (!_dateRangesOverlap(a.startDate, a.endDate, b.startDate, b.endDate)) {
+    return null;
+  }
+
+  for (final aMeeting in a.meetings) {
+    final aDay = aMeeting.day.trim();
+    final aStart = _parseMinutes(aMeeting.startTime);
+    final aEnd = _parseMinutes(aMeeting.endTime);
+
+    if (aDay.isEmpty || aStart == null || aEnd == null || aStart >= aEnd) {
+      continue;
+    }
+
+    for (final bMeeting in b.meetings) {
+      final bDay = bMeeting.day.trim();
+      final bStart = _parseMinutes(bMeeting.startTime);
+      final bEnd = _parseMinutes(bMeeting.endTime);
+
+      if (bDay.isEmpty || bStart == null || bEnd == null || bStart >= bEnd) {
+        continue;
+      }
+
+      if (aDay == bDay && aStart < bEnd && bStart < aEnd) {
+        final overlapStart = aStart > bStart ? aStart : bStart;
+        final overlapEnd = aEnd < bEnd ? aEnd : bEnd;
+        return _OverlapDetail(
+          day: aDay,
+          startMinutes: overlapStart,
+          endMinutes: overlapEnd,
+        );
+      }
+    }
+  }
+
+  return null;
+}
+
+// Check whether two section date ranges overlap
+bool _dateRangesOverlap(
+  DateTime aStart,
+  DateTime aEnd,
+  DateTime bStart,
+  DateTime bEnd,
+) {
+  final aStartDate = DateTime(aStart.year, aStart.month, aStart.day);
+  final aEndDate = DateTime(aEnd.year, aEnd.month, aEnd.day);
+  final bStartDate = DateTime(bStart.year, bStart.month, bStart.day);
+  final bEndDate = DateTime(bEnd.year, bEnd.month, bEnd.day);
+
+  return !aEndDate.isBefore(bStartDate) && !bEndDate.isBefore(aStartDate);
+}
+
+// Convert a database time string into total minutes
+int? _parseMinutes(String raw) {
+  final parts = raw.trim().split(':');
+  if (parts.length < 2) return null;
+
+  final hour = int.tryParse(parts[0]);
+  final minute = int.tryParse(parts[1]);
+  if (hour == null || minute == null) return null;
+
+  return (hour * 60) + minute;
+}
+
+// Simple section label holder used in conflict messages
+class _SectionContext {
+  final String label;
+
+  const _SectionContext({required this.label});
+}
+
+// Overlap details used for schedule conflict messages
+class _OverlapDetail {
+  final String day;
+  final int startMinutes;
+  final int endMinutes;
+
+  const _OverlapDetail({
+    required this.day,
+    required this.startMinutes,
+    required this.endMinutes,
+  });
+
+  // Summary text for the overlapping day and time range
+  String get summary {
+    return '${_shortDay(day)} ${_formatMinutes(startMinutes)}-${_formatMinutes(endMinutes)}';
+  }
+}
+
+// Exception used when a selected schedule overlaps another one
+class ScheduleConflictException implements Exception {
+  final String message;
+
+  const ScheduleConflictException(this.message);
+
+  @override
+  // Return the conflict message text
+  String toString() => message;
+}
+
+// Convert a full weekday name into a short label
+String _shortDay(String day) {
+  switch (day) {
+    case 'Monday':
+      return 'Mon';
+    case 'Tuesday':
+      return 'Tue';
+    case 'Wednesday':
+      return 'Wed';
+    case 'Thursday':
+      return 'Thu';
+    case 'Friday':
+      return 'Fri';
+    case 'Saturday':
+      return 'Sat';
+    case 'Sunday':
+      return 'Sun';
+    default:
+      return day;
+  }
+}
+
+// Convert total minutes into an HH:mm time string
+String _formatMinutes(int totalMinutes) {
+  final hour = (totalMinutes ~/ 60).toString().padLeft(2, '0');
+  final minute = (totalMinutes % 60).toString().padLeft(2, '0');
+  return '$hour:$minute';
 }
 
 // =============== Provider to get students enrolled courses  ===============
@@ -212,91 +578,84 @@ final myEnrolledCoursesProvider = FutureProvider<List<EnrolledCourse>>((
   final user = ref.read(currentUserProvider);
   if (user == null) return [];
 
-  // Query the view which returns the flattend results
+  // Query the user's enrolled section rows directly so we only return the
+  // exact lecture/lab/tutorial selections they chose.
   final rows = await supabase
-      .from('v_my_course_sections')
+      .from('student_enrolled_sections')
       .select('''
-      user_id,
-      course_id, course_code, course_name, term, subject_code, subject_name,
-      section_id, crn, section, schedule_type, campus, start_date, end_date,
-      day, start_time, end_time, building_shortname, room_code,
-      primary_instructor_name
+      section_id,
+      course_sections!inner (
+        id, crn, section, schedule_type, campus, start_date, end_date,
+        courses!inner (
+          id, course_code, course_name, term,
+          course_subjects (
+            code, name
+          )
+        ),
+        section_instructors (
+          id,
+          role,
+          instructor (
+            id, name, email, type, faculty, office
+          ),
+          office_hours (
+            day, start, end
+          )
+        ),
+        course_schedule (
+          day, start_time, end_time,
+          rooms (
+            room_code,
+            building (
+              shortname
+            )
+          )
+        )
+      )
     ''')
       .eq('user_id', user.id)
-      .order('term', ascending: false)
-      .order('course_code', ascending: true);
+      .order('created_at', ascending: true);
 
-  // Normalize rows into a list
-  final list = (rows as List)
-      .map((e) => (e as Map).cast<String, dynamic>())
-      .toList();
-
-  // Group by course
+  // Group selected sections by course for the UI.
   final Map<int, _CourseAgg> courseAgg = {};
 
-  // Interate every flat row and place it into correct course and section
-  for (final r in list) {
-    final courseId = r['course_id'] as int;
+  for (final row in (rows as List)) {
+    final enrolledRow = (row as Map).cast<String, dynamic>();
+    final sectionMap = (enrolledRow['course_sections'] as Map?)
+        ?.cast<String, dynamic>();
+    if (sectionMap == null) continue;
+
+    final courseMap = (sectionMap['courses'] as Map?)?.cast<String, dynamic>();
+    if (courseMap == null) continue;
+
+    final subjectMap =
+        (courseMap['course_subjects'] as Map?)?.cast<String, dynamic>() ?? {};
+
+    final courseId = (courseMap['id'] as num).toInt();
     courseAgg.putIfAbsent(courseId, () {
       return _CourseAgg(
         courseId: courseId,
-        courseCode: (r['course_code'] as String?) ?? '',
-        courseName: (r['course_name'] as String?) ?? '',
-        term: (r['term'] as String?) ?? '',
-        subjectCode: (r['subject_code'] as String?) ?? '',
-        subjectName: (r['subject_name'] as String?) ?? '',
+        courseCode: (courseMap['course_code'] as String?) ?? '',
+        courseName: (courseMap['course_name'] as String?) ?? '',
+        term: (courseMap['term'] as String?) ?? '',
+        subjectCode: (subjectMap['code'] as String?) ?? '',
+        subjectName: (subjectMap['name'] as String?) ?? '',
       );
     });
 
     // Null check for section id (shouldnt happen)
-    final sectionId = r['section_id'];
+    final sectionId = sectionMap['id'];
     if (sectionId == null) continue;
 
-    final secID = sectionId as int;
-
-    // Retrieve/create the section object
-    final section = courseAgg[courseId]!.sections.putIfAbsent(secID, () {
-      final primaryName = (r['primary_instructor_name'] as String?)?.trim();
-
-      return CourseSection(
-        id: secID,
-        crn: (r['crn'] as String?) ?? '',
-        section: (r['section'] as String?) ?? '',
-        scheduleType: (r['schedule_type'] as String?) ?? '',
-        campus: (r['campus'] as String?) ?? '',
-        startDate: DateTime.parse(r['start_date'] as String),
-        endDate: DateTime.parse(r['end_date'] as String),
-        meetings: <SectionMeeting>[],
-        primaryInstructorName: (primaryName != null && primaryName.isNotEmpty)
-            ? primaryName
-            : null,
-        allInstructorNames: (primaryName != null && primaryName.isNotEmpty)
-            ? <String>[primaryName]
-            : <String>[],
-      );
-    });
-
-    // Meetng fields might be null if sec has no scheduled meetings yet
-    final day = r['day'];
-    final start = r['start_time'];
-    final end = r['end_time'];
-
-    // Only add meeting if all time components exist
-    if (day != null && start != null && end != null) {
-      section.meetings.add(
-        SectionMeeting(
-          day: day as String,
-          startTime: start as String,
-          endTime: end as String,
-          buildingShort: r['building_shortname'] as String?,
-          roomCode: r['room_code'] as String?,
-        ),
-      );
-    }
+    final secID = (sectionId as num).toInt();
+    courseAgg[courseId]!.sections.putIfAbsent(
+      secID,
+      () => CourseSection.fromMap(sectionMap),
+    );
   }
 
   // Convert aggregated struct into enrolledCourse list
-  return courseAgg.values.map((c) {
+  final courses = courseAgg.values.map((c) {
     final sections = c.sections.values.toList();
     sections.sort((a, b) {
       final t = a.scheduleType.compareTo(b.scheduleType);
@@ -314,9 +673,18 @@ final myEnrolledCoursesProvider = FutureProvider<List<EnrolledCourse>>((
       sections: sections,
     );
   }).toList();
+
+  courses.sort((a, b) {
+    final termCompare = b.term.compareTo(a.term);
+    if (termCompare != 0) return termCompare;
+    return a.courseCode.compareTo(b.courseCode);
+  });
+
+  return courses;
 });
 
 // Internal aggregation holder used by MyEnrolledCoursesProvider
+// Stores one enrolled course while selected sections are being grouped
 class _CourseAgg {
   final int courseId;
   final String courseCode;
@@ -343,13 +711,12 @@ final dropCourseProvider = Provider<DropCourseService>((ref) {
   return DropCourseService(ref);
 });
 
+// Service for dropping a course for the current student
 class DropCourseService {
   final Ref ref;
   DropCourseService(this.ref);
 
-  // Drops the course for the current user:
-  // 1) Deletes enrolled sections that belong to this course
-  // 2) Deletes the enrolled course row
+  // Drop the course and all of its selected sections
   Future<void> dropCourse(int courseId) async {
     final supabase = ref.read(supabaseProvider);
     final user = ref.read(currentUserProvider);
@@ -384,6 +751,236 @@ class DropCourseService {
 
     // invalidate the only enrolled courses
     ref.invalidate(myEnrolledCoursesProvider);
+
+    // Update the home widget
+    await WidgetManager.updateNextClassWidget();
+  }
+}
+
+final sectionStaffProvider = Provider<SectionStaffService>((ref) {
+  return SectionStaffService(ref);
+});
+
+// Service for adding and editing professor or TA data
+class SectionStaffService {
+  final Ref ref;
+
+  SectionStaffService(this.ref);
+
+  // Add a professor or TA to a selected section
+  Future<void> addStaffToSection({
+    required int sectionId,
+    required String role,
+    required String name,
+    required String email,
+    required String faculty,
+    required String office,
+    List<StaffOfficeHourInput> officeHours = const [],
+  }) async {
+    final supabase = ref.read(supabaseProvider);
+
+    final normalizedRole = role.trim();
+    final normalizedName = name.trim();
+    if (normalizedName.isEmpty) {
+      throw Exception('Name is required.');
+    }
+
+    _validateOfficeHours(officeHours);
+
+    final instructorRows = await supabase
+        .from('instructor')
+        .upsert({
+          'name': normalizedName,
+          'email': email.trim().isEmpty ? null : email.trim(),
+          'type': normalizedRole,
+          'faculty': faculty.trim().isEmpty ? null : faculty.trim(),
+          'office': office.trim().isEmpty ? null : office.trim(),
+        }, onConflict: 'name')
+        .select('id')
+        .limit(1);
+
+    if ((instructorRows as List).isEmpty) {
+      throw Exception('Unable to save instructor information.');
+    }
+
+    final instructorId = ((instructorRows.first as Map)['id'] as num).toInt();
+
+    final existingSectionInstructorRows = await supabase
+        .from('section_instructors')
+        .select('id')
+        .eq('section_id', sectionId)
+        .eq('instructor_id', instructorId)
+        .limit(1);
+
+    int sectionInstructorId;
+    if ((existingSectionInstructorRows as List).isNotEmpty) {
+      sectionInstructorId =
+          (((existingSectionInstructorRows.first as Map)['id']) as num).toInt();
+
+      await supabase
+          .from('section_instructors')
+          .update({'role': _dbRoleForStaffType(normalizedRole)})
+          .eq('id', sectionInstructorId);
+    } else {
+      final insertedSectionInstructorRows = await supabase
+          .from('section_instructors')
+          .insert({
+            'section_id': sectionId,
+            'instructor_id': instructorId,
+            'role': _dbRoleForStaffType(normalizedRole),
+          })
+          .select('id')
+          .limit(1);
+
+      if ((insertedSectionInstructorRows as List).isEmpty) {
+        throw Exception('Unable to link staff member to this section.');
+      }
+
+      sectionInstructorId =
+          (((insertedSectionInstructorRows.first as Map)['id']) as num).toInt();
+    }
+
+    for (final officeHour in officeHours) {
+      await supabase.from('office_hours').insert({
+        'day': officeHour.day.trim(),
+        'start': officeHour.start.trim(),
+        'end': officeHour.end.trim(),
+        'section_instructor_id': sectionInstructorId,
+      });
+    }
+
+    ref.invalidate(myEnrolledCoursesProvider);
+  }
+
+  // Update professor or TA info across linked section rows
+  Future<void> updateStaffForSections({
+    required int instructorId,
+    required List<int> sectionInstructorIds,
+    required String role,
+    required String name,
+    required String email,
+    required String faculty,
+    required String office,
+    List<StaffOfficeHourInput> officeHours = const [],
+  }) async {
+    final supabase = ref.read(supabaseProvider);
+
+    final normalizedName = name.trim();
+    if (normalizedName.isEmpty) {
+      throw Exception('Name is required.');
+    }
+
+    if (sectionInstructorIds.isEmpty) {
+      throw Exception('No linked section instructor rows were found.');
+    }
+
+    _validateOfficeHours(officeHours);
+
+    await supabase
+        .from('instructor')
+        .update({
+          'name': normalizedName,
+          'email': email.trim().isEmpty ? null : email.trim(),
+          'type': role.trim(),
+          'faculty': faculty.trim().isEmpty ? null : faculty.trim(),
+          'office': office.trim().isEmpty ? null : office.trim(),
+        })
+        .eq('id', instructorId);
+
+    final dbRole = _dbRoleForStaffType(role);
+
+    for (final sectionInstructorId in sectionInstructorIds) {
+      await supabase
+          .from('section_instructors')
+          .update({'role': dbRole})
+          .eq('id', sectionInstructorId);
+
+      await supabase
+          .from('office_hours')
+          .delete()
+          .eq('section_instructor_id', sectionInstructorId);
+
+      for (final officeHour in officeHours) {
+        await supabase.from('office_hours').insert({
+          'day': officeHour.day.trim(),
+          'start': officeHour.start.trim(),
+          'end': officeHour.end.trim(),
+          'section_instructor_id': sectionInstructorId,
+        });
+      }
+    }
+
+    ref.invalidate(myEnrolledCoursesProvider);
+  }
+
+  // Convert the UI role into the database section role
+  String _dbRoleForStaffType(String role) {
+    if (role.trim().toLowerCase() == 'professor') {
+      return 'Primary';
+    }
+    return 'TA';
+  }
+
+  // Validate that each office hour entry is complete
+  void _validateOfficeHours(List<StaffOfficeHourInput> officeHours) {
+    for (final officeHour in officeHours) {
+      if (officeHour.day.trim().isEmpty ||
+          officeHour.start.trim().isEmpty ||
+          officeHour.end.trim().isEmpty) {
+        throw Exception(
+          'Each office hour entry requires a day, start time, and end time.',
+        );
+      }
+    }
+  }
+}
+
+final courseCanvasLinkProvider = Provider<CourseCanvasLinkService>((ref) {
+  return CourseCanvasLinkService(ref);
+});
+
+// Service for saving and removing Canvas routing numbers
+class CourseCanvasLinkService {
+  final Ref ref;
+
+  CourseCanvasLinkService(this.ref);
+
+  // Save the Canvas routing number for an enrolled course
+  Future<void> saveCanvasCourseId({
+    required int courseId,
+    required String canvasCourseId,
+  }) async {
+    final supabase = ref.read(supabaseProvider);
+    final user = ref.read(currentUserProvider);
+    if (user == null) throw Exception('Not logged in.');
+
+    final normalizedId = canvasCourseId.trim();
+    if (normalizedId.isEmpty) {
+      throw Exception('Canvas routing number is required.');
+    }
+
+    await supabase
+        .from('student_enrolled_courses')
+        .update({'canvas_course_id': normalizedId})
+        .eq('user_id', user.id)
+        .eq('course_id', courseId);
+
+    ref.invalidate(enrolledCourseCanvasIdProvider(courseId));
+  }
+
+  // Delete the saved Canvas routing number for an enrolled course
+  Future<void> deleteCanvasCourseId({required int courseId}) async {
+    final supabase = ref.read(supabaseProvider);
+    final user = ref.read(currentUserProvider);
+    if (user == null) throw Exception('Not logged in.');
+
+    await supabase
+        .from('student_enrolled_courses')
+        .update({'canvas_course_id': null})
+        .eq('user_id', user.id)
+        .eq('course_id', courseId);
+
+    ref.invalidate(enrolledCourseCanvasIdProvider(courseId));
   }
 }
 
@@ -396,7 +993,11 @@ final myCoursesTermFilterProvider =
 class MyCoursesTermFilterNotifier extends Notifier<String?> {
   @override
   String? build() => null; // null = All terms
+
+  // Set the selected term for My Courses
   void setTerm(String? term) => state = term;
+
+  // Clear the My Courses term filter
   void clear() => state = null;
 }
 
@@ -421,6 +1022,35 @@ final myEnrolledTermOptionsProvider = Provider<AsyncValue<List<String>>>((ref) {
 final filteredMyEnrolledCoursesProvider =
     Provider<AsyncValue<List<EnrolledCourse>>>((ref) {
       final termFilter = ref.watch(myCoursesTermFilterProvider);
+      final enrolledAsync = ref.watch(myEnrolledCoursesProvider);
+
+      return enrolledAsync.whenData((courses) {
+        if (termFilter == null) return courses;
+        return courses.where((c) => c.term.trim() == termFilter).toList();
+      });
+    });
+
+// =============== Term filter for drop course page ===============
+final dropCoursesTermFilterProvider =
+    NotifierProvider<DropCoursesTermFilterNotifier, String?>(
+      DropCoursesTermFilterNotifier.new,
+    );
+
+class DropCoursesTermFilterNotifier extends Notifier<String?> {
+  @override
+  String? build() => null; // null = All terms
+
+  // Set the selected term for Drop Course
+  void setTerm(String? term) => state = term;
+
+  // Clear the Drop Course term filter
+  void clear() => state = null;
+}
+
+/// Filtered enrolled courses for drop course UI
+final filteredDropEnrolledCoursesProvider =
+    Provider<AsyncValue<List<EnrolledCourse>>>((ref) {
+      final termFilter = ref.watch(dropCoursesTermFilterProvider);
       final enrolledAsync = ref.watch(myEnrolledCoursesProvider);
 
       return enrolledAsync.whenData((courses) {

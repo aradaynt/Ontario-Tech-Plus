@@ -45,13 +45,19 @@ class _BookingPageState extends State<BookingPage>
           .eq('id', user.id)
           .single();
 
+      int safeYear =
+          int.tryParse(
+            profileResponse['year'].toString().replaceAll('+', ''),
+          ) ??
+          0;
+
       currentStudent = Student(
         name: "${profileResponse['firstname']} ${profileResponse['lastname']}",
         studentid: int.parse(profileResponse['student_number'].toString()),
         email: profileResponse['email'],
         program: profileResponse['program'],
         faculty: profileResponse['faculty'],
-        year: int.parse(profileResponse['year'].toString()),
+        year: safeYear,
         courses: [],
       );
 
