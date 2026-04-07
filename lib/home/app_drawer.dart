@@ -6,7 +6,6 @@ import 'package:ontario_tech_plus/profile/profile_provider.dart';
 import 'package:ontario_tech_plus/theme/theme_provider.dart';
 import 'package:ontario_tech_plus/core/global_providers/nav_tab_provider.dart';
 
-// ✅ IMPORT ACTUAL PAGES
 import 'package:ontario_tech_plus/booking/booking_page.dart';
 import 'package:ontario_tech_plus/appointments/appointment_landing.dart';
 
