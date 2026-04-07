@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../profile/profile_model.dart';
 import '../student.dart';
 import 'time_selector.dart';
 
 class WeekSelection extends StatefulWidget {
   final Instructor? instructor;
   final Advisor? advisor;
-  final Student student;
+  final Profile profile;
   final Dates date;
   const WeekSelection({
     super.key,
     this.instructor,
     this.advisor,
-    required this.student,
+    required this.profile,
     required this.date,
   });
   @override
@@ -176,7 +177,7 @@ class _WeekSelectionState extends State<WeekSelection> {
                             builder: (context) => SpecificTime(
                               instructor: widget.instructor,
                               advisor: widget.advisor,
-                              student: widget.student,
+                              profile: widget.profile,
                               date: widget.date,
                               weekLabel:
                                   "$selectedWeekString, ${year.toString()}",

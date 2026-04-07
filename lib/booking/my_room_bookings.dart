@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
-import '../student.dart';
+import 'package:ontario_tech_plus/profile/profile_model.dart';
 
 class RoomBookingModel {
   final dynamic id;
@@ -40,8 +40,8 @@ class RoomBookingModel {
 }
 
 class MyRoomBookingsPage extends StatefulWidget {
-  final Student student;
-  const MyRoomBookingsPage({super.key, required this.student});
+  final Profile profile;
+  const MyRoomBookingsPage({super.key, required this.profile});
 
   @override
   State<MyRoomBookingsPage> createState() => _MyRoomBookingsPageState();
@@ -50,7 +50,6 @@ class MyRoomBookingsPage extends StatefulWidget {
 class _MyRoomBookingsPageState extends State<MyRoomBookingsPage> {
   bool _isLoading = true;
   List<RoomBookingModel> myBookings = [];
-  late Student student1 = widget.student;
 
   Set<dynamic> selectedIds = {};
 
@@ -68,7 +67,7 @@ class _MyRoomBookingsPageState extends State<MyRoomBookingsPage> {
           .select('''
             id, date, start, end, rooms (room_code, building (name))
           ''')
-          .eq('student_id', student1.studentid)
+          .eq('student_id', int.parse(widget.profile.studentNumber))
           .order('date', ascending: true);
 
       final List<RoomBookingModel> fetched = (response as List).map((row) {
