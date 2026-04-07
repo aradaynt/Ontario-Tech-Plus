@@ -12,6 +12,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ontario_tech_plus/auth/auth_providers.dart';
 import 'package:ontario_tech_plus/auth/bio_logic.dart';
 import 'package:ontario_tech_plus/auth/password_reset_page.dart';
+import 'package:ontario_tech_plus/auth/bio_logic.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});

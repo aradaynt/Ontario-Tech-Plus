@@ -1,109 +1,86 @@
-// //will not be in use currently only skeleton of later algorithm(most likely done in pytorch)
+// lib/recs(ml)/algorithm.dart
 
-// // 1. Helper function to calculate the match score
-// double _calculateMatchScore(
-//   StudentPreferences prefs,
-//   List<String> itemTags,
-//   double itemExtroversion,
-// ) {
-//   // Score Part A: Interests Overlap
-//   int tagMatches = 0;
-//   for (String interest in prefs.interests) {
-//     if (itemTags.contains(interest)) {
-//       tagMatches++;
-//     }
-//   }
+class RecommendationEngine {
+  // Traits order: [Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism]
+  // Scores range from 0.0 to 10.0
 
-//   // Score Part B: Personality Match
-//   // Calculate the difference between the user's extroversion and the item's.
-//   // A smaller difference means a better match. Max difference is 9.0.
-//   double extroversionDifference = (prefs.extroversionLevel - itemExtroversion)
-//       .abs();
+  static const List<String> clubs = [
+    'Adventure Club',
+    'Art & Design Society',
+    'Book Club',
+    'General Social Club',
+    'Wellness & Meditation Group',
+    'Debate Team',
+    'Coding & Tech Club',
+    'Volunteer Society',
+    'Music Ensemble',
+    'Esports Association'
+  ];
 
-//   // Convert the difference into a positive score out of 10.
-//   double personalityScore = 10.0 - extroversionDifference;
+  static const List<String> electives = [
+    'Introduction to Psychology',
+    'Business & Data Analytics',
+    'Creative Writing',
+    'Public Speaking',
+    'Outdoor Education',
+    'Digital Media Production',
+    'Sociology of Human Rights'
+  ];
 
-//   // Final Score: Weight the tags heavily (e.g., 10 points per matching tag)
-//   // and add the personality score.
-//   return (tagMatches * 10.0) + personalityScore;
-// }
+  // Synthesized Linear Model Coefficients (Weights) for Clubs
+  static const List<List<double>> _clubWeights = [
+    [0.8, -0.2, 0.9, 0.1, -0.6],  // Adventure Club (High O, High E, Low N)
+    [0.9, -0.4, 0.2, 0.3, 0.1],   // Art & Design (High O, Low C)
+    [0.2, 0.8, -0.7, 0.6, 0.0],   // Book Club (High C, Low E)
+    [0.5, 0.5, 0.5, 0.5, 0.0],    // General Social Club (Balanced)
+    [0.3, 0.2, -0.3, 0.8, 0.9],   // Wellness Group (High A, High N)
+    [-0.2, 0.7, 0.8, -0.6, 0.1],  // Debate Team (High C, High E, Low A)
+    [0.4, 0.9, -0.5, 0.1, 0.2],   // Coding & Tech (High C, Low E)
+    [0.2, 0.4, 0.7, 0.9, -0.2],   // Volunteer Society (High E, High A)
+    [0.7, 0.4, 0.6, 0.3, 0.1],    // Music Ensemble (High O, High E)
+    [-0.3, -0.2, 0.5, 0.1, 0.4],  // Esports (Low O, Mid E)
+  ];
 
-// // 2. Updated fetching function
-// void _getRecommendations() async {
-//   if (_selectedInterests.isEmpty) {
-//     ScaffoldMessenger.of(context).showSnackBar(
-//       const SnackBar(content: Text('Please select at least one interest!')),
-//     );
-//     return;
-//   }
+  // Synthesized Linear Model Coefficients (Weights) for Electives
+  static const List<List<double>> _electiveWeights = [
+    [0.7, 0.1, 0.3, 0.8, 0.2],    // Psychology (High O, High A)
+    [0.1, 0.9, 0.2, -0.2, -0.4],  // Business Analytics (High C, Low N)
+    [0.9, 0.2, -0.4, 0.3, 0.5],   // Creative Writing (High O, Low E)
+    [0.2, 0.4, 0.9, 0.1, -0.5],   // Public Speaking (High E, Low N)
+    [0.6, 0.2, 0.8, 0.4, -0.6],   // Outdoor Education (High O, High E)
+    [0.8, 0.3, 0.5, 0.2, 0.1],    // Digital Media (High O, Mid E)
+    [0.5, 0.6, 0.4, 0.7, 0.2],    // Sociology (High A, High C)
+  ];
 
-//   setState(() {
-//     _isLoading = true;
-//     _recommendations.clear();
-//   });
+  /// Predicts the best item from a list based on user personality scores using a linear decision function.
+  static String _predictBestMatch(List<double> userScores, List<String> names, List<List<double>> weights) {
+    if (userScores.length != 5) throw ArgumentError('Must provide exactly 5 trait scores.');
 
-//   final studentData = StudentPreferences(
-//     interests: _selectedInterests,
-//     extroversionLevel: _extroversionLevel,
-//     wantsClubs: _searchClubs,
-//     wantsElectives: _searchElectives,
-//   );
+    double maxScore = -double.infinity;
+    int bestIndex = 0;
 
-//   // Simulate network delay
-//   await Future.delayed(const Duration(milliseconds: 1500));
+    for (int i = 0; i < weights.length; i++) {
+      double currentScore = 0.0;
+      // Calculate dot product (Linear prediction)
+      for (int j = 0; j < 5; j++) {
+        currentScore += weights[i][j] * userScores[j];
+      }
 
-//   // Create a temporary list to hold items and their calculated scores
-//   List<Map<String, dynamic>> scoredItems = [];
+      if (currentScore > maxScore) {
+        maxScore = currentScore;
+        bestIndex = i;
+      }
+    }
+    return names[bestIndex];
+  }
 
-//   // Score all the clubs if the user wants them
-//   if (studentData.wantsClubs) {
-//     for (var club in dummyClubs) {
-//       double score = _calculateMatchScore(
-//         studentData,
-//         club.tags,
-//         club.extroversionScore,
-//       );
-//       // Only consider it a match if they have at least *some* overlapping interest (score > 10)
-//       if (score >= 10.0) {
-//         scoredItems.add({'item': club, 'score': score});
-//       }
-//     }
-//   }
+  /// Returns the recommended Club based on Big 5 traits
+  static String getRecommendedClub(List<double> traits) {
+    return _predictBestMatch(traits, clubs, _clubWeights);
+  }
 
-//   // Score all the electives if the user wants them
-//   if (studentData.wantsElectives) {
-//     for (var elective in dummyElectives) {
-//       double score = _calculateMatchScore(
-//         studentData,
-//         elective.tags,
-//         elective.extroversionScore,
-//       );
-//       if (score >= 10.0) {
-//         scoredItems.add({'item': elective, 'score': score});
-//       }
-//     }
-//   }
-
-//   // Sort the list from highest score to lowest score
-//   scoredItems.sort((a, b) => b['score'].compareTo(a['score']));
-
-//   setState(() {
-//     _isLoading = false;
-//     // Extract just the item objects from the sorted map, taking the top 3 results
-//     _recommendations = scoredItems
-//         .take(3)
-//         .map((e) => e['item'] as Object)
-//         .toList();
-
-//     // Fallback if no exact matches were found
-//     if (_recommendations.isEmpty) {
-//       ScaffoldMessenger.of(context).showSnackBar(
-//         const SnackBar(
-//           content: Text(
-//             'No exact matches found. Try selecting more interests!',
-//           ),
-//         ),
-//       );
-//     }
-//   });
-// }
+  /// Returns the recommended Elective based on Big 5 traits
+  static String getRecommendedElective(List<double> traits) {
+    return _predictBestMatch(traits, electives, _electiveWeights);
+  }
+}
