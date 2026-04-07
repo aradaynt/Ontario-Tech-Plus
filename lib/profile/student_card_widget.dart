@@ -113,6 +113,10 @@ class StudentCardWidget extends StatelessWidget {
 
   final Profile profile;
 
+  // Fall back image if no PFP in db for user, or it didnt load for some reason
+  static const String _fallbackProfileImage =
+      'assets/logos/ModifiedOntarioTechLogo.png';
+
   // Build the student card content
   @override
   Widget build(BuildContext context) {
@@ -145,9 +149,12 @@ class StudentCardWidget extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.asset(
-                    'assets/studentPhotos/sampleStudentPhoto.jpg',
+                  // PFP image
+                  Image(
+                    image: _buildProfileCardImage(),
                     fit: BoxFit.fill,
+                    errorBuilder: (_, _, _) =>
+                        Image.asset(_fallbackProfileImage, fit: BoxFit.fill),
                   ),
                   Container(color: Colors.black.withValues(alpha: 0.14)),
                 ],
@@ -231,6 +238,16 @@ class StudentCardWidget extends StatelessWidget {
         );
       },
     );
+  }
+
+  // Load profile image from supabase, or use fallback.
+  ImageProvider _buildProfileCardImage() {
+    final profileImageUrl = profile.profileImageUrl;
+    if (profileImageUrl == null || profileImageUrl.isEmpty) {
+      return const AssetImage(_fallbackProfileImage);
+    }
+
+    return NetworkImage(profileImageUrl);
   }
 }
 
