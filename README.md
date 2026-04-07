@@ -11,10 +11,11 @@ According to a large portion of the student population, the Ontario Tech Mobile 
     - Login/Logout
     - Forgot Password
     - Profile Picture (Uses ML to guarantee picture is of a face)
-    - Student ID Encoded Barcode
+    - Profile detail editting
+    - Student ID with student number encoded barcode
 - Course Management
     - Add/Drop Course
-    - View Enrolled Courses and Instructors
+    - View Enrolled Courses and Instructors, along with button link to canvas
     - Weekly Schedule Timetable\
 - Navigation
     - Campus Interactive Map
@@ -68,7 +69,7 @@ flutter run
 `Details of Features listed above`
 |Name|Work|
 |:-:|:-:|
-|Arad Ayntabli|Appointments, Book a Room, Home Screen Widget |
+|Arad Ayntabli|Appointments, Book a Room, Home Screen Widget, Supabase Assistance|
 |Aaron James|Profile, Course Management, Supabase Setup|
 |Ayaan Mustafa|Navigation|
 |Sami Khan|QR Codes, Club Recommendation|
