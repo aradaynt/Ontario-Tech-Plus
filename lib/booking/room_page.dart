@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
-import '../student.dart';
+import '../profile/profile_model.dart';
 
 class RoomModel {
   final int id;
@@ -29,11 +29,11 @@ class GridBooking {
 
 class RoomPage extends StatefulWidget {
   final String buildingName;
-  final Student student;
+  final Profile profile;
   const RoomPage({
     super.key,
     required this.buildingName,
-    required this.student,
+    required this.profile,
   });
 
   @override
@@ -290,7 +290,7 @@ class _RoomPageState extends State<RoomPage> {
 
   Widget _buildDateSelector() {
     return Container(
-      color: Theme.of(context).primaryColor.withOpacity(0.1),
+      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -562,7 +562,7 @@ class _RoomPageState extends State<RoomPage> {
       child: Container(
         margin: const EdgeInsets.all(1),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.85),
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.85),
           borderRadius: BorderRadius.circular(6),
           boxShadow: const [
             BoxShadow(
@@ -646,7 +646,7 @@ class _RoomPageState extends State<RoomPage> {
         'date': dateString,
         'start': startTime,
         'end': endTime,
-        'student_id': widget.student.studentid,
+        'student_id': int.parse(widget.profile.studentNumber),
       });
 
       if (mounted) {
