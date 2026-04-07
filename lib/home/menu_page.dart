@@ -1,7 +1,8 @@
 // OntarioTechPlus - menu_page
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:ontario_tech_plus/home//webview_page.dart';
+import 'package:ontario_tech_plus/home/webview_page.dart';
+import 'package:ontario_tech_plus/recs(ml)/reccomendation_pages.dart';
 
 class MenuPage extends StatelessWidget {
   const MenuPage({super.key});
@@ -19,9 +20,9 @@ class MenuPage extends StatelessWidget {
         ],
       ),
       body: ListView(
-        children: const [
+        children: [
           // ================= MY FINANCES =================
-          MenuSection(
+          const MenuSection(
             title: "My finances",
             items: [
               MenuItemData(
@@ -43,7 +44,7 @@ class MenuPage extends StatelessWidget {
           ),
 
           // ================= HELPING YOU SUCCEED =================
-          MenuSection(
+          const MenuSection(
             title: "Helping you succeed",
             items: [
               MenuItemData(
@@ -77,7 +78,7 @@ class MenuPage extends StatelessWidget {
           ),
 
           // ================= STUDENT SERVICES =================
-          MenuSection(
+          const MenuSection(
             title: "Student services",
             items: [
               MenuItemData(
@@ -122,6 +123,26 @@ class MenuPage extends StatelessWidget {
               ),
             ],
           ),
+
+          // ================= RECOMMENDATIONS =================
+          MenuSection(
+            title: "Recommendations",
+            items: [
+              MenuItemData(
+                icon: Icons.star,
+                label: "Discover Clubs & Electives",
+                url: "",
+              ),
+            ],
+            onItemTap: (item) {
+              if (item.label == "Discover Clubs & Electives") {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RecommendationPage()),
+                );
+              }
+            },
+          ),
         ],
       ),
     );
@@ -129,12 +150,17 @@ class MenuPage extends StatelessWidget {
 }
 
 // ================= SECTION =================
-
 class MenuSection extends StatefulWidget {
   final String title;
   final List<MenuItemData> items;
+  final void Function(MenuItemData)? onItemTap;
 
-  const MenuSection({super.key, required this.title, required this.items});
+  const MenuSection({
+    super.key,
+    required this.title,
+    required this.items,
+    this.onItemTap,
+  });
 
   @override
   State<MenuSection> createState() => _MenuSectionState();
@@ -179,7 +205,8 @@ class _MenuSectionState extends State<MenuSection> {
                 crossAxisSpacing: 12,
                 childAspectRatio: 0.85,
               ),
-              itemBuilder: (_, i) => MenuItem(item: widget.items[i]),
+              itemBuilder: (_, i) =>
+                  MenuItem(item: widget.items[i], onTap: widget.onItemTap),
             ),
           ),
           crossFadeState: expanded
@@ -195,7 +222,6 @@ class _MenuSectionState extends State<MenuSection> {
 }
 
 // ================= DATA =================
-
 class MenuItemData {
   final String? svgPath;
   final IconData? icon;
@@ -211,25 +237,29 @@ class MenuItemData {
 }
 
 // ================= ITEM =================
-
 class MenuItem extends StatelessWidget {
   final MenuItemData item;
+  final void Function(MenuItemData)? onTap;
 
-  const MenuItem({super.key, required this.item});
+  const MenuItem({super.key, required this.item, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => WebViewPage(
-              url: item.url,
-              title: item.label.replaceAll('\n', ' '),
+        if (onTap != null) {
+          onTap!(item);
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => WebViewPage(
+                url: item.url,
+                title: item.label.replaceAll('\n', ' '),
+              ),
             ),
-          ),
-        );
+          );
+        }
       },
       borderRadius: BorderRadius.circular(12),
       child: Column(
