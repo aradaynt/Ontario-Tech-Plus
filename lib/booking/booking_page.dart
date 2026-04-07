@@ -1,24 +1,26 @@
+// booking_page.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:ontario_tech_plus/booking/room_page.dart';
-import 'package:ontario_tech_plus/booking/my_room_bookings.dart';
+import 'package:ontario_tech_plus/settings/settings_provider.dart';
 import '../student.dart';
+import 'room_page.dart';
+import 'my_room_bookings.dart';
 
-class BookingPage extends StatefulWidget {
+class BookingPage extends ConsumerStatefulWidget {
   const BookingPage({super.key});
 
   @override
-  State<BookingPage> createState() => _BookingPageState();
+  ConsumerState<BookingPage> createState() => _BookingPageState();
 }
 
-class _BookingPageState extends State<BookingPage>
+class _BookingPageState extends ConsumerState<BookingPage>
     with SingleTickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   late AnimationController _animationController;
 
   bool _isLoading = true;
   late Student currentStudent;
-
   List<String> buildings = [];
   int selectedBuilding = -1;
 
@@ -36,7 +38,6 @@ class _BookingPageState extends State<BookingPage>
     try {
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
-
       if (user == null) throw Exception("User is not logged in!");
 
       final profileResponse = await supabase
@@ -74,7 +75,10 @@ class _BookingPageState extends State<BookingPage>
           buildings = fetchedBuildings;
           _isLoading = false;
         });
-        _animationController.forward();
+
+        // Only play animation if animations are enabled
+        final disableAnimations = ref.read(settingsProvider).disableAnimations;
+        if (!disableAnimations) _animationController.forward();
       }
     } catch (error) {
       print('Error fetching initial data: $error');
@@ -97,6 +101,7 @@ class _BookingPageState extends State<BookingPage>
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final disableAnimations = ref.watch(settingsProvider).disableAnimations;
 
     if (_isLoading) {
       return Scaffold(
@@ -120,8 +125,10 @@ class _BookingPageState extends State<BookingPage>
                       MyRoomBookingsPage(student: currentStudent),
                 ),
               ).then((_) {
-                _animationController.reset();
-                _animationController.forward();
+                if (!disableAnimations) {
+                  _animationController.reset();
+                  _animationController.forward();
+                }
               });
             },
           ),
@@ -158,6 +165,39 @@ class _BookingPageState extends State<BookingPage>
                     itemCount: buildings.length,
                     itemBuilder: (context, index) {
                       final isSelected = selectedBuilding == index;
+
+                      final child = GestureDetector(
+                        onTap: () => setState(
+                          () => selectedBuilding = isSelected ? -1 : index,
+                        ),
+                        child: Center(
+                          child: Card(
+                            color: isSelected
+                                ? colorScheme.primary
+                                : Colors.white,
+                            child: Padding(
+                              padding: const EdgeInsets.all(20.0),
+                              child: Text(
+                                buildings[index],
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? colorScheme.onPrimary
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+
+                      if (disableAnimations) {
+                        // No animation
+                        return child;
+                      }
+
+                      // Animated SlideTransition
                       const double slideDuration = 0.4;
                       const double staggerSpace = 1.0 - slideDuration;
                       final int totalItems = buildings.length;
@@ -184,31 +224,7 @@ class _BookingPageState extends State<BookingPage>
 
                       return SlideTransition(
                         position: slideAnimation,
-                        child: GestureDetector(
-                          onTap: () => setState(
-                            () => selectedBuilding = isSelected ? -1 : index,
-                          ),
-                          child: Center(
-                            child: Card(
-                              color: isSelected
-                                  ? colorScheme.primary
-                                  : Colors.white,
-                              child: Padding(
-                                padding: const EdgeInsets.all(20.0),
-                                child: Text(
-                                  buildings[index],
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? colorScheme.onPrimary
-                                        : Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+                        child: child,
                       );
                     },
                   ),
@@ -230,8 +246,10 @@ class _BookingPageState extends State<BookingPage>
                           ),
                         ),
                       ).then((_) {
-                        _animationController.reset();
-                        _animationController.forward();
+                        if (!disableAnimations) {
+                          _animationController.reset();
+                          _animationController.forward();
+                        }
                       });
                     },
                     child: const Text("Next"),

@@ -28,12 +28,14 @@ class ShellPage extends ConsumerWidget {
     // Used to hide the nav bar if the signed in user has no profile (Error state)
     final profileAsync = ref.watch(profileProvider);
 
+    // FIX: reorder pages so indices match bottom nav
     final pages = const [
-      HomePage(),
+      HomePage(), // index 0 (Home)
+      SchedulePage(), // index 1 (Schedule)
+      MapsPage(), // index 2 (Map) <-- FIXED
+      // remaining pages (not in bottom nav, but still accessible elsewhere)
       AppointmentTypePage(),
       BookingPage(),
-      SchedulePage(),
-      MapsPage(),
       SearchPage(),
     ];
 

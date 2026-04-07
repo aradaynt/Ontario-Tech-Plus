@@ -14,33 +14,37 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return NavigationBarTheme(
       data: NavigationBarThemeData(
         indicatorColor: Colors.transparent,
 
-        iconTheme: WidgetStateProperty.resolveWith<IconThemeData?>((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: Colors.blue);
+        iconTheme: MaterialStateProperty.resolveWith<IconThemeData>((states) {
+          if (states.contains(MaterialState.selected)) {
+            return IconThemeData(color: colorScheme.primary);
           }
-          return IconThemeData(color: Colors.grey.shade600);
+          return IconThemeData(color: colorScheme.onSurface.withOpacity(0.6));
         }),
 
-        labelTextStyle: WidgetStateProperty.resolveWith<TextStyle?>((states) {
+        labelTextStyle: MaterialStateProperty.resolveWith<TextStyle>((states) {
           const base = TextStyle(fontSize: 12, height: 1.1);
-
-          if (states.contains(WidgetState.selected)) {
+          if (states.contains(MaterialState.selected)) {
             return base.copyWith(
-              color: Colors.blue,
+              color: colorScheme.primary,
               fontWeight: FontWeight.w600,
             );
           }
-
-          return base.copyWith(color: Colors.grey, fontWeight: FontWeight.w500);
+          return base.copyWith(
+            color: colorScheme.onSurface.withOpacity(0.6),
+            fontWeight: FontWeight.w500,
+          );
         }),
       ),
 
       child: NavigationBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.background,
         surfaceTintColor: Colors.transparent,
         selectedIndex: currentIndex,
         onDestinationSelected: onTap,
@@ -48,7 +52,10 @@ class AppBottomNav extends StatelessWidget {
 
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.schedule), label: 'Schedule'),
+          NavigationDestination(
+            icon: Icon(Icons.menu_book_rounded),
+            label: 'Academics',
+          ),
           NavigationDestination(icon: Icon(Icons.navigation), label: 'Map'),
         ],
       ),

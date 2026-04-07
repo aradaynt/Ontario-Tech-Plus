@@ -6,6 +6,8 @@ import 'package:ontario_tech_plus/auth/auth_providers.dart';
 import 'package:ontario_tech_plus/profile/profile_provider.dart';
 import 'package:ontario_tech_plus/home/app_drawer.dart';
 
+import '../QRcodes/scan_qr.dart';
+
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
@@ -165,12 +167,15 @@ class HomePage extends ConsumerWidget {
                     const SizedBox(height: 12),
 
                     _MobileFeatureCard(
-                      title: "Recommendations",
-                      subtitle: "Check suggestions",
-                      icon: Icons.grade,
+                      title: "QR Code Scanner",
+                      subtitle: "Scan QR Code",
+                      icon: Icons.qr_code,
                       color: const Color(0xFF00AEEF),
-                      onTap: () =>
-                          Navigator.pushNamed(context, '/recommendations'),
+                      onTap: () {
+                        Navigator.of(context, rootNavigator: true).push(
+                          MaterialPageRoute(builder: (_) => const ScanQRPage()),
+                        );
+                      },
                     ),
                     const SizedBox(height: 12),
 
@@ -190,8 +195,6 @@ class HomePage extends ConsumerWidget {
                       color: const Color(0xFF0055B7),
                       onTap: () => Navigator.pushNamed(context, '/settings'),
                     ),
-
-                    const SizedBox(height: 32),
 
                     const SizedBox(height: 32),
                   ]),

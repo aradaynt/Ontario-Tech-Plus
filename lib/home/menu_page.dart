@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ontario_tech_plus/home/webview_page.dart';
 import 'package:ontario_tech_plus/recs(ml)/reccomendation_pages.dart';
+import 'package:ontario_tech_plus/QRcodes/scan_qr.dart';
 
 class MenuPage extends StatelessWidget {
   const MenuPage({super.key});
@@ -139,6 +140,22 @@ class MenuPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const RecommendationPage()),
+                );
+              }
+            },
+          ),
+
+          // ================= QR CODE =================
+          MenuSection(
+            title: "QR Codes",
+            items: [
+              MenuItemData(icon: Icons.qr_code, label: "Scan QR Code", url: ""),
+            ],
+            onItemTap: (item) {
+              if (item.label == "Scan QR Code") {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ScanQRPage()),
                 );
               }
             },

@@ -4,6 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ontario_tech_plus/profile/profile_provider.dart';
 import 'package:ontario_tech_plus/theme/theme_provider.dart';
+import 'package:ontario_tech_plus/core/global_providers/nav_tab_provider.dart';
+
+// ✅ IMPORT ACTUAL PAGES
+import 'package:ontario_tech_plus/booking/booking_page.dart';
+import 'package:ontario_tech_plus/appointments/appointment_landing.dart';
+
+import '../QRcodes/scan_qr.dart';
 
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
@@ -43,7 +50,10 @@ class AppDrawer extends ConsumerWidget {
                   _DrawerTile(
                     icon: Icons.home,
                     label: "Home",
-                    route: '/shell',
+                    onTap: () {
+                      Navigator.pop(context);
+                      ref.read(tabIndexProvider.notifier).setIndex(0);
+                    },
                     theme: theme,
                   ),
 
@@ -51,13 +61,25 @@ class AppDrawer extends ConsumerWidget {
                   _DrawerTile(
                     icon: Icons.grid_view,
                     label: "Menu",
-                    route: '/menu',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.of(
+                        context,
+                        rootNavigator: true,
+                      ).pushNamed('/menu');
+                    },
                     theme: theme,
                   ),
                   _DrawerTile(
                     icon: Icons.search,
                     label: "Search",
-                    route: '/search',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.of(
+                        context,
+                        rootNavigator: true,
+                      ).pushNamed('/search');
+                    },
                     theme: theme,
                   ),
 
@@ -65,21 +87,53 @@ class AppDrawer extends ConsumerWidget {
                   _DrawerTile(
                     icon: Icons.add_box,
                     label: "Booking",
-                    route: '/booking',
-                    theme: theme,
-                  ),
-                  _DrawerTile(
-                    icon: Icons.event,
-                    label: "Appointments",
-                    route: '/appointments',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.of(context, rootNavigator: true).push(
+                        MaterialPageRoute(builder: (_) => const BookingPage()),
+                      );
+                    },
                     theme: theme,
                   ),
 
+                  // ---- Appointments ----
+                  _DrawerTile(
+                    icon: Icons.event,
+                    label: "Appointments",
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.of(context, rootNavigator: true).push(
+                        MaterialPageRoute(
+                          builder: (_) => const AppointmentTypePage(),
+                        ),
+                      );
+                    },
+                    theme: theme,
+                  ),
+
+                  // ---- Scan QR Code ----
+                  _DrawerTile(
+                    icon: Icons.qr_code,
+                    label: "QR Code Scanner",
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.of(context, rootNavigator: true).push(
+                        MaterialPageRoute(builder: (_) => const ScanQRPage()),
+                      );
+                    },
+                    theme: theme,
+                  ),
                   // ---- Settings ----
                   _DrawerTile(
                     icon: Icons.settings,
                     label: "Settings",
-                    route: '/settings',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.of(
+                        context,
+                        rootNavigator: true,
+                      ).pushNamed('/settings');
+                    },
                     theme: theme,
                   ),
                 ],
@@ -196,13 +250,13 @@ class _DrawerHeaderFallback extends StatelessWidget {
 class _DrawerTile extends StatelessWidget {
   final IconData icon;
   final String label;
-  final String route;
+  final VoidCallback onTap;
   final ThemeData theme;
 
   const _DrawerTile({
     required this.icon,
     required this.label,
-    required this.route,
+    required this.onTap,
     required this.theme,
   });
 
@@ -213,12 +267,7 @@ class _DrawerTile extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.zero,
         splashColor: theme.colorScheme.primary.withOpacity(0.1),
-
-        onTap: () {
-          Navigator.pop(context);
-          Navigator.pushNamed(context, route);
-        },
-
+        onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
           child: Row(

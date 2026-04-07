@@ -1,53 +1,61 @@
+//  OntarioTechPlus - settings_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Font size options
+// ---------------- Font Size Enum ----------------
 enum FontSizeOption { small, medium, large, extraLarge }
 
+// ---------------- Settings State ----------------
 class SettingsState {
+  final FontSizeOption fontSize;
   final bool courseNotifications;
   final bool recommendationAlerts;
-  final bool reducedMotion;
-  final FontSizeOption fontSize;
+  final bool disableAnimations;
 
   const SettingsState({
+    this.fontSize = FontSizeOption.medium,
     this.courseNotifications = true,
     this.recommendationAlerts = true,
-    this.reducedMotion = false,
-    this.fontSize = FontSizeOption.medium,
+    this.disableAnimations = false,
   });
 
   SettingsState copyWith({
+    FontSizeOption? fontSize,
     bool? courseNotifications,
     bool? recommendationAlerts,
-    bool? reducedMotion,
-    FontSizeOption? fontSize,
+    bool? disableAnimations,
   }) {
     return SettingsState(
+      fontSize: fontSize ?? this.fontSize,
       courseNotifications: courseNotifications ?? this.courseNotifications,
       recommendationAlerts: recommendationAlerts ?? this.recommendationAlerts,
-      reducedMotion: reducedMotion ?? this.reducedMotion,
-      fontSize: fontSize ?? this.fontSize,
+      disableAnimations: disableAnimations ?? this.disableAnimations,
     );
   }
 }
 
+// ---------------- Settings Notifier ----------------
 class SettingsNotifier extends Notifier<SettingsState> {
   @override
   SettingsState build() => const SettingsState();
 
-  void toggleCourseNotifications(bool value) =>
-      state = state.copyWith(courseNotifications: value);
+  void setFontSize(FontSizeOption size) {
+    state = state.copyWith(fontSize: size);
+  }
 
-  void toggleRecommendationAlerts(bool value) =>
-      state = state.copyWith(recommendationAlerts: value);
+  void toggleCourseNotifications(bool value) {
+    state = state.copyWith(courseNotifications: value);
+  }
 
-  void toggleReducedMotion(bool value) =>
-      state = state.copyWith(reducedMotion: value);
+  void toggleRecommendationAlerts(bool value) {
+    state = state.copyWith(recommendationAlerts: value);
+  }
 
-  void setFontSize(FontSizeOption option) =>
-      state = state.copyWith(fontSize: option);
+  void toggleAnimations(bool value) {
+    state = state.copyWith(disableAnimations: value);
+  }
 }
 
+// ---------------- Provider ----------------
 final settingsProvider = NotifierProvider<SettingsNotifier, SettingsState>(
   SettingsNotifier.new,
 );
