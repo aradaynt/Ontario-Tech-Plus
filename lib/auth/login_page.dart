@@ -8,11 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
 import 'package:ontario_tech_plus/auth/auth_providers.dart';
 import 'package:ontario_tech_plus/auth/bio_logic.dart';
 import 'package:ontario_tech_plus/auth/password_reset_page.dart';
-import 'package:ontario_tech_plus/auth/bio_logic.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -121,8 +119,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         );
 
         // Save credentials to secure storage for future biometric logins
-        await _secureStorage.write(key: 'saved_email', value: _emailController.text.trim());
-        await _secureStorage.write(key: 'saved_password', value: _passwordController.text.trim());
+        await _secureStorage.write(
+          key: 'saved_email',
+          value: _emailController.text.trim(),
+        );
+        await _secureStorage.write(
+          key: 'saved_password',
+          value: _passwordController.text.trim(),
+        );
 
         // Handles signups
       } else {
@@ -174,10 +178,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     if (savedEmail == null || savedPassword == null) {
       setState(() {
-        _error = "No account linked. Please log in with your email and password first to enable biometrics.";
+        _error =
+            "No account linked. Please log in with your email and password first to enable biometrics.";
         _loading = false;
       });
-      return; 
+      return;
     }
 
     // 2. Trigger the native Android fingerprint/face scanner
@@ -188,7 +193,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       try {
         final auth = ref.read(authServiceProvider);
         await auth.signIn(savedEmail, savedPassword);
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -198,10 +203,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
           );
         }
-        
       } catch (e) {
         setState(() {
-          _error = "Saved credentials expired or invalid. Please log in manually.";
+          _error =
+              "Saved credentials expired or invalid. Please log in manually.";
           _loading = false;
         });
       }
@@ -596,7 +601,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           if (_isLogin) ...[
                             const SizedBox(height: 16),
                             IconButton(
-                              onPressed: _loading ? null : _handleBiometricLogin,
+                              onPressed: _loading
+                                  ? null
+                                  : _handleBiometricLogin,
                               icon: const Icon(
                                 Icons.fingerprint,
                                 size: 50,
@@ -606,7 +613,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             ),
                             const Text(
                               "Tap to use Fingerprint/Face ID",
-                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
                             ),
                           ],
 
