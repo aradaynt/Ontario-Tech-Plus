@@ -31,6 +31,20 @@ class _CourseAppointmentPageState extends State<CourseAppointmentPage> {
     _initializeData();
   }
 
+  String _getCurrentTerm() {
+    final now = DateTime.now();
+    final month = now.month;
+    final year = now.year;
+
+    if (month >= 1 && month <= 5) {
+      return "Winter $year";
+    }
+    //(Treating June-August as Fall prep)
+    else {
+      return "Fall $year";
+    }
+  }
+
   Future<void> _initializeData() async {
     try {
       final supabase = Supabase.instance.client;
@@ -40,10 +54,13 @@ class _CourseAppointmentPageState extends State<CourseAppointmentPage> {
         throw Exception("User is not logged in!");
       }
 
+      final currentTerm = _getCurrentTerm();
+
       final enrolledResponse = await supabase
           .from('student_enrolled_courses')
-          .select('courses (*)')
-          .eq('user_id', user.id);
+          .select('courses!inner (*)')
+          .eq('user_id', user.id)
+          .eq('courses.term', currentTerm);
 
       final fetchedCourses = enrolledResponse
           .map((e) => e['courses'] as Map<String, dynamic>)
