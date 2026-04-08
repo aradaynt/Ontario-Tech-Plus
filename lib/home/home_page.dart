@@ -1,4 +1,5 @@
 // OntarioTechPlus - home_page
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -35,172 +36,166 @@ class HomePage extends ConsumerWidget {
 
         return Scaffold(
           drawer: const AppDrawer(),
-          body: CustomScrollView(
-            slivers: [
-              // ================= HEADER =================
-              SliverAppBar(
-                pinned: true,
-                expandedHeight: 180,
-                backgroundColor: const Color(0xFF0055B7),
-                elevation: 0,
-                leading: Builder(
-                  builder: (context) => IconButton(
-                    icon: const Icon(Icons.menu, color: Colors.white),
-                    onPressed: () => Scaffold.of(context).openDrawer(),
-                  ),
-                ),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.person, color: Colors.white),
-                    onPressed: () => Navigator.pushNamed(context, '/profile'),
-                  ),
-                ],
-                flexibleSpace: FlexibleSpaceBar(
-                  collapseMode: CollapseMode.parallax,
-                  background: SafeArea(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF0055B7), Color(0xFF00AEEF)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Welcome back,",
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "${profile.firstname} ${profile.lastname}",
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "Student #: ${profile.studentNumber}",
-                            style: const TextStyle(color: Colors.white70),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+
+          // =================  HEADER =================
+          appBar: AppBar(
+            toolbarHeight: 90,
+            backgroundColor: const Color(0xFF0055B7),
+            elevation: 0,
+
+            leading: Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: () => Scaffold.of(context).openDrawer(),
               ),
+            ),
 
-              // ================= BODY =================
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    const SizedBox(height: 16),
-
-                    const Text(
-                      "Quick Actions",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // ================= FEATURE CARDS =================
-
-                    // ================= NOTIFICATIONS =================
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        color: const Color(0xFF0055B7),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            "Notifications",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.white,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            "No new notifications",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    _MobileFeatureCard(
-                      title: "Courses",
-                      subtitle: "View your courses",
-                      icon: Icons.book,
-                      color: const Color(0xFF0055B7),
-                      onTap: () => Navigator.pushNamed(context, '/courses'),
-                    ),
-                    const SizedBox(height: 12),
-
-                    _MobileFeatureCard(
-                      title: "QR Code Scanner",
-                      subtitle: "Scan QR Code",
-                      icon: Icons.qr_code,
-                      color: const Color(0xFF00AEEF),
-                      onTap: () {
-                        Navigator.of(context, rootNavigator: true).push(
-                          MaterialPageRoute(builder: (_) => const ScanQRPage()),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    _MobileFeatureCard(
-                      title: "Schedule",
-                      subtitle: "See your timetable",
-                      icon: Icons.schedule,
-                      color: const Color(0xFFFF6F00),
-                      onTap: () => Navigator.pushNamed(context, '/schedule'),
-                    ),
-                    const SizedBox(height: 12),
-
-                    _MobileFeatureCard(
-                      title: "Settings",
-                      subtitle: "Manage preferences",
-                      icon: Icons.settings,
-                      color: const Color(0xFF0055B7),
-                      onTap: () => Navigator.pushNamed(context, '/settings'),
-                    ),
-
-                    const SizedBox(height: 32),
-                  ]),
-                ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.person),
+                onPressed: () => Navigator.pushNamed(context, '/profile'),
               ),
             ],
+
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  "Welcome back,",
+                  style: TextStyle(fontSize: 14, color: Colors.white70),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "${profile.firstname} ${profile.lastname}",
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  "Student #: ${profile.studentNumber}",
+                  style: const TextStyle(fontSize: 13, color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+
+          // ================= BODY =================
+          body: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // HEADER EXTENSION
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF0055B7), Color(0xFF00AEEF)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: const Text(
+                    "Quick Actions",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+
+                // ================= CONTENT =================
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: const Color(0xFF0055B7),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              "Notifications",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              "No new notifications",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      _MobileFeatureCard(
+                        title: "Courses",
+                        subtitle: "View your courses",
+                        icon: Icons.book,
+                        color: const Color(0xFF0055B7),
+                        onTap: () => Navigator.pushNamed(context, '/courses'),
+                      ),
+                      const SizedBox(height: 12),
+
+                      _MobileFeatureCard(
+                        title: "QR Code Scanner",
+                        subtitle: "Scan QR Code",
+                        icon: Icons.qr_code,
+                        color: const Color(0xFF00AEEF),
+                        onTap: () {
+                          Navigator.of(context, rootNavigator: true).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ScanQRPage(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+
+                      _MobileFeatureCard(
+                        title: "Schedule",
+                        subtitle: "See your timetable",
+                        icon: Icons.schedule,
+                        color: const Color(0xFFFF6F00),
+                        onTap: () => Navigator.pushNamed(context, '/schedule'),
+                      ),
+                      const SizedBox(height: 12),
+
+                      _MobileFeatureCard(
+                        title: "Settings",
+                        subtitle: "Manage preferences",
+                        icon: Icons.settings,
+                        color: const Color(0xFF0055B7),
+                        onTap: () => Navigator.pushNamed(context, '/settings'),
+                      ),
+
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

@@ -9,6 +9,7 @@ import 'package:ontario_tech_plus/core/global_providers/nav_tab_provider.dart';
 import 'package:ontario_tech_plus/booking/booking_page.dart';
 import 'package:ontario_tech_plus/appointments/appointment_landing.dart';
 
+import '../QRcodes/generate_qr_page.dart';
 import '../QRcodes/scan_qr.dart';
 
 class AppDrawer extends ConsumerWidget {
@@ -118,6 +119,20 @@ class AppDrawer extends ConsumerWidget {
                       Navigator.pop(context);
                       Navigator.of(context, rootNavigator: true).push(
                         MaterialPageRoute(builder: (_) => const ScanQRPage()),
+                      );
+                    },
+                    theme: theme,
+                  ),
+                  // ---- QR Code Maker ----
+                  _DrawerTile(
+                    icon: Icons.qr_code_scanner_sharp,
+                    label: "Generate QR Code",
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.of(context, rootNavigator: true).push(
+                        MaterialPageRoute(
+                          builder: (_) => const GenerateQRPage(),
+                        ),
                       );
                     },
                     theme: theme,
