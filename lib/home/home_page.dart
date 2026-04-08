@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ontario_tech_plus/auth/auth_providers.dart';
+import 'package:ontario_tech_plus/profile/profile_model.dart';
 import 'package:ontario_tech_plus/profile/profile_provider.dart';
 import 'package:ontario_tech_plus/home/app_drawer.dart';
 
@@ -20,7 +21,7 @@ class HomePage extends ConsumerWidget {
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
 
-      error: (_, __) => const Scaffold(
+      error: (_, _) => const Scaffold(
         body: Center(
           child: Text(
             "Error loading profile",
@@ -51,9 +52,19 @@ class HomePage extends ConsumerWidget {
             ),
 
             actions: [
-              IconButton(
-                icon: const Icon(Icons.person),
-                onPressed: () => Navigator.pushNamed(context, '/profile'),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: IconButton(
+                  // Show the saved profile photo in the app bar when available
+                  icon: CircleAvatar(
+                    radius: 16,
+                    backgroundImage: _buildProfileImage(profile),
+                    child: profile.profileImageUrl == null
+                        ? const Icon(Icons.person, size: 24)
+                        : null,
+                  ),
+                  onPressed: () => Navigator.pushNamed(context, '/profile'),
+                ),
               ),
             ],
 
@@ -122,7 +133,7 @@ class HomePage extends ConsumerWidget {
                           color: const Color(0xFF0055B7),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
+                              color: Colors.black.withValues(alpha: 0.08),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -201,6 +212,16 @@ class HomePage extends ConsumerWidget {
       },
     );
   }
+}
+
+// Builds the home page avatar image from the saved profile photo URL.
+ImageProvider? _buildProfileImage(Profile profile) {
+  final profileImageUrl = profile.profileImageUrl;
+  if (profileImageUrl == null || profileImageUrl.isEmpty) {
+    return null;
+  }
+
+  return NetworkImage(profileImageUrl);
 }
 
 // ================= MISSING PROFILE =================
@@ -292,13 +313,16 @@ class _MobileFeatureCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
-            colors: [color.withOpacity(0.85), color.withOpacity(0.6)],
+            colors: [
+              color.withValues(alpha: 0.85),
+              color.withValues(alpha: 0.6),
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),

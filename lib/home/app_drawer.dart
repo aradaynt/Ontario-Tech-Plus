@@ -30,13 +30,14 @@ class AppDrawer extends ConsumerWidget {
             // ================= HEADER =================
             profileAsync.when(
               loading: () => const _DrawerHeaderLoading(),
-              error: (_, __) => const _DrawerHeaderFallback(),
+              error: (_, _) => const _DrawerHeaderFallback(),
               data: (profile) {
                 if (profile == null) return const _DrawerHeaderFallback();
 
                 return _DrawerHeader(
                   name: "${profile.firstname} ${profile.lastname}",
                   studentId: profile.studentNumber,
+                  profileImageUrl: profile.profileImageUrl,
                 );
               },
             ),
@@ -167,8 +168,13 @@ class AppDrawer extends ConsumerWidget {
 class _DrawerHeader extends StatelessWidget {
   final String name;
   final String studentId;
+  final String? profileImageUrl;
 
-  const _DrawerHeader({required this.name, required this.studentId});
+  const _DrawerHeader({
+    required this.name,
+    required this.studentId,
+    this.profileImageUrl,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -193,10 +199,14 @@ class _DrawerHeader extends StatelessWidget {
       child: Row(
         children: [
           // PROFILE ICON
-          const CircleAvatar(
+          CircleAvatar(
             radius: 30,
             backgroundColor: Colors.white,
-            child: Icon(Icons.person, size: 34, color: Colors.black54),
+            // Show the uploaded profile photo when one exists.
+            backgroundImage: _buildProfileImage(profileImageUrl),
+            child: (profileImageUrl == null || profileImageUrl!.isEmpty)
+                ? const Icon(Icons.person, size: 34, color: Colors.black54)
+                : null,
           ),
 
           const SizedBox(width: 14),
@@ -257,6 +267,15 @@ class _DrawerHeaderFallback extends StatelessWidget {
   }
 }
 
+// Builds the drawer avatar image from the saved profile photo URL.
+ImageProvider? _buildProfileImage(String? profileImageUrl) {
+  if (profileImageUrl == null || profileImageUrl.isEmpty) {
+    return null;
+  }
+
+  return NetworkImage(profileImageUrl);
+}
+
 //
 // ================= TILE =================
 //
@@ -280,7 +299,7 @@ class _DrawerTile extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.zero,
-        splashColor: theme.colorScheme.primary.withOpacity(0.1),
+        splashColor: theme.colorScheme.primary.withValues(alpha: 0.1),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
