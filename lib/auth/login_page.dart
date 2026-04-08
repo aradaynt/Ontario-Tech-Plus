@@ -113,13 +113,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // Only use certain fields depending on mode (signup/signin)
     try {
       // Base login
-      print("Trying to login");
       if (_isLogin) {
-        print("Hello man");
         await auth.signIn(
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
+
+        ref.read(authStatusMessageProvider.notifier).clear();
 
         // Save credentials to secure storage for future biometric logins
         await _secureStorage.write(
@@ -196,6 +196,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       try {
         final auth = ref.read(authServiceProvider);
         await auth.signIn(savedEmail, savedPassword);
+        ref.read(authStatusMessageProvider.notifier).clear();
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
