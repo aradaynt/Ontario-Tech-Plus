@@ -567,45 +567,46 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         // Save and cancel button appearing under information
         if (_isEditing) ...[
           // Check if editting
-          Row(
-            children: [
-              // Cancel button
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: (_isSaving || _isSigningOut || _isUploadingPhoto)
-                      ? null
-                      : () {
-                          setState(() => _isEditing = false);
-                          _fillControllers(profile); // reset edits
-                        },
-                  child: const Text("Cancel"),
+          SafeArea(
+            top: false,
+            minimum: const EdgeInsets.only(top: 16, bottom: 16),
+            child: Row(
+              children: [
+                // Cancel button
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: (_isSaving || _isSigningOut || _isUploadingPhoto)
+                        ? null
+                        : () {
+                            setState(() => _isEditing = false);
+                            _fillControllers(profile); // reset edits
+                          },
+                    child: const Text("Cancel"),
+                  ),
                 ),
-              ),
 
-              const SizedBox(width: 12),
+                const SizedBox(width: 12),
 
-              // Save button
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: (_isSaving || _isSigningOut || _isUploadingPhoto)
-                      ? null
-                      : () async {
-                          await _saveEdits(profile);
-                        },
-                  child: _isSaving
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text("Save"),
+                // Save button
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: (_isSaving || _isSigningOut || _isUploadingPhoto)
+                        ? null
+                        : () async {
+                            await _saveEdits(profile);
+                          },
+                    child: _isSaving
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text("Save"),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-
-          // Space for save button
-          const SizedBox(height: 16),
         ],
       ],
     );
