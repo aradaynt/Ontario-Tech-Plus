@@ -58,7 +58,7 @@ dependencies:
   encrypt: ^5.0.3
   local_auth: ^2.2.0
   flutter_secure_storage: ^9.0.0
-  screenshot: ^2.3.0
+  screenshot: ^3.0.0
   permission_handler: ^11.3.0
 
   image_gallery_saver_plus: ^4.0.1
