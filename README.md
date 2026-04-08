@@ -1,4 +1,4 @@
-<img width="634" height="155" alt="image" src="https://github.com/user-attachments/assets/3ac3ccc7-c7f5-48fb-bf63-356d8b812dd7" /># Ontario Tech Plus <img src="assets\logos\ModifiedOntarioTechLogo.png" width=30></img>
+# Ontario Tech Plus <img src="assets\logos\ModifiedOntarioTechLogo.png" width=30></img>
 
 ### Why upgrade the current app?
 
