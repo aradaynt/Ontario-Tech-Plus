@@ -407,6 +407,23 @@ class _CourseEnrollPageState extends ConsumerState<CourseEnrollPage> {
       );
     }
 
+    // Duplicate enrollment for the same course error
+    if (message.startsWith("Already enrolled in this course:")) {
+      final reasons = _extractReasonLines(message);
+      return _DialogDetails(
+        title: "Enrollment Conflict",
+        intro: "You are already enrolled in this course.",
+        reasons: reasons.isEmpty
+            ? [
+                _cleanConflictReason(
+                  message,
+                  "Already enrolled in this course:",
+                ),
+              ]
+            : reasons,
+      );
+    }
+
     // Fallback message for any other enrollment error
     return _DialogDetails(
       title: title,

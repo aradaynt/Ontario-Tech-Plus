@@ -222,8 +222,13 @@ class ViewCoursePage extends ConsumerWidget {
                                 ),
                               ),
                               IconButton(
-                                onPressed: () =>
-                                    _showEditStaffDialog(context, ref, staff),
+                                // Pass the current course id so course-level staff updates stay in sync
+                                onPressed: () => _showEditStaffDialog(
+                                  context,
+                                  ref,
+                                  currentCourse.courseId,
+                                  staff,
+                                ),
                                 icon: const Icon(Icons.edit_outlined),
                                 tooltip: "Edit ${staff.name}",
                                 visualDensity: VisualDensity.compact,
@@ -626,6 +631,7 @@ class ViewCoursePage extends ConsumerWidget {
   Future<void> _showEditStaffDialog(
     BuildContext context,
     WidgetRef ref,
+    int courseId,
     _CourseStaffInfo staff,
   ) async {
     await showDialog<void>(
@@ -658,6 +664,7 @@ class ViewCoursePage extends ConsumerWidget {
                 await ref
                     .read(sectionStaffProvider)
                     .updateStaffForSections(
+                      courseId: courseId,
                       instructorId: staff.instructorId,
                       sectionInstructorIds: staff.sectionInstructorIds,
                       role: staff.role,
@@ -1020,6 +1027,11 @@ class _AddStaffDialogState extends ConsumerState<_AddStaffDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _emailController,
+                // Keep the email field from auto cap on mobile keyboards
+                keyboardType: TextInputType.emailAddress,
+                textCapitalization: TextCapitalization.none,
+                autocorrect: false,
+                enableSuggestions: false,
                 decoration: const InputDecoration(
                   labelText: "Email",
                   border: OutlineInputBorder(),
