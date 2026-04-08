@@ -50,6 +50,46 @@ class StaffOfficeHourInput {
     required this.start,
     required this.end,
   });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is StaffOfficeHourInput &&
+        other.day == day &&
+        other.start == start &&
+        other.end == end;
+  }
+
+  @override
+  int get hashCode => Object.hash(day, start, end);
+}
+
+// Compare office hour lists
+bool _sameOfficeHourSet(
+  List<StaffOfficeHourInput> a,
+  List<StaffOfficeHourInput> b,
+) {
+  if (a.length != b.length) return false;
+
+  final aSorted = [...a]
+    ..sort(
+      (first, second) => '${first.day}|${first.start}|${first.end}'.compareTo(
+        '${second.day}|${second.start}|${second.end}',
+      ),
+    );
+  final bSorted = [...b]
+    ..sort(
+      (first, second) => '${first.day}|${first.start}|${first.end}'.compareTo(
+        '${second.day}|${second.start}|${second.end}',
+      ),
+    );
+
+  for (var i = 0; i < aSorted.length; i++) {
+    if (aSorted[i] != bSorted[i]) return false;
+  }
+
+  return true;
 }
 
 // Stores currently selectedsubject filter for all courses
@@ -314,6 +354,23 @@ class SectionEnrollmentService {
     }
 
     final enrolledCourses = await ref.read(myEnrolledCoursesProvider.future);
+
+    // Prevent the student from enrolling in same course twice
+    EnrolledCourse? alreadyEnrolledCourse;
+    for (final course in enrolledCourses) {
+      if (course.courseId == courseId) {
+        alreadyEnrolledCourse = course;
+        break;
+      }
+    }
+
+    if (alreadyEnrolledCourse != null) {
+      throw Exception(
+        'Already enrolled in this course:\n'
+        '- ${alreadyEnrolledCourse.courseCode} ${alreadyEnrolledCourse.courseName}\n'
+        '- Term: ${alreadyEnrolledCourse.term}',
+      );
+    }
 
     final selectedConflict = _findFirstConflict(
       selectedSections,
@@ -767,7 +824,7 @@ class SectionStaffService {
 
   SectionStaffService(this.ref);
 
-  // Add a professor or TA to a selected section
+  // Add a professor or TA to one selected course section
   Future<void> addStaffToSection({
     required int sectionId,
     required String role,
@@ -781,17 +838,19 @@ class SectionStaffService {
 
     final normalizedRole = role.trim();
     final normalizedName = name.trim();
+    final normalizedEmail = email.trim().toLowerCase();
     if (normalizedName.isEmpty) {
       throw Exception('Name is required.');
     }
 
     _validateOfficeHours(officeHours);
 
+    // Save the shared instructor details first
     final instructorRows = await supabase
         .from('instructor')
         .upsert({
           'name': normalizedName,
-          'email': email.trim().isEmpty ? null : email.trim(),
+          'email': normalizedEmail.isEmpty ? null : normalizedEmail,
           'type': normalizedRole,
           'faculty': faculty.trim().isEmpty ? null : faculty.trim(),
           'office': office.trim().isEmpty ? null : office.trim(),
@@ -805,6 +864,7 @@ class SectionStaffService {
 
     final instructorId = ((instructorRows.first as Map)['id'] as num).toInt();
 
+    // If this instructor is already linked to the section, update that existing row
     final existingSectionInstructorRows = await supabase
         .from('section_instructors')
         .select('id')
@@ -822,6 +882,7 @@ class SectionStaffService {
           .update({'role': _dbRoleForStaffType(normalizedRole)})
           .eq('id', sectionInstructorId);
     } else {
+      // Otherwise create the link between the section and the instructor
       final insertedSectionInstructorRows = await supabase
           .from('section_instructors')
           .insert({
@@ -840,6 +901,7 @@ class SectionStaffService {
           (((insertedSectionInstructorRows.first as Map)['id']) as num).toInt();
     }
 
+    // Save any office hours that were entered for this section staff record
     for (final officeHour in officeHours) {
       await supabase.from('office_hours').insert({
         'day': officeHour.day.trim(),
@@ -854,6 +916,7 @@ class SectionStaffService {
 
   // Update professor or TA info across linked section rows
   Future<void> updateStaffForSections({
+    required int courseId,
     required int instructorId,
     required List<int> sectionInstructorIds,
     required String role,
@@ -866,6 +929,7 @@ class SectionStaffService {
     final supabase = ref.read(supabaseProvider);
 
     final normalizedName = name.trim();
+    final normalizedEmail = email.trim().toLowerCase();
     if (normalizedName.isEmpty) {
       throw Exception('Name is required.');
     }
@@ -880,7 +944,7 @@ class SectionStaffService {
         .from('instructor')
         .update({
           'name': normalizedName,
-          'email': email.trim().isEmpty ? null : email.trim(),
+          'email': normalizedEmail.isEmpty ? null : normalizedEmail,
           'type': role.trim(),
           'faculty': faculty.trim().isEmpty ? null : faculty.trim(),
           'office': office.trim().isEmpty ? null : office.trim(),
@@ -888,24 +952,106 @@ class SectionStaffService {
         .eq('id', instructorId);
 
     final dbRole = _dbRoleForStaffType(role);
+    // Remove duplicate section ids and office hour rows before saving
+    final uniqueSectionInstructorIds = sectionInstructorIds.toSet().toList()
+      ..sort();
+    final normalizedOfficeHours = officeHours
+        .map(
+          (officeHour) => StaffOfficeHourInput(
+            day: officeHour.day.trim(),
+            start: officeHour.start.trim(),
+            end: officeHour.end.trim(),
+          ),
+        )
+        .where(
+          (officeHour) =>
+              officeHour.day.isNotEmpty &&
+              officeHour.start.isNotEmpty &&
+              officeHour.end.isNotEmpty,
+        )
+        .toSet()
+        .toList();
 
-    for (final sectionInstructorId in sectionInstructorIds) {
+    for (final sectionInstructorId in uniqueSectionInstructorIds) {
       await supabase
           .from('section_instructors')
           .update({'role': dbRole})
           .eq('id', sectionInstructorId);
+    }
 
-      await supabase
+    // Load every section_instructor row for this staff member in the course
+    final courseSectionInstructorRows = await supabase
+        .from('section_instructors')
+        .select('id, course_sections!inner(course_id)')
+        .eq('instructor_id', instructorId)
+        .eq('course_sections.course_id', courseId);
+
+    final courseSectionInstructorIds =
+        (courseSectionInstructorRows as List)
+            .map((row) => ((row as Map)['id'] as num?)?.toInt())
+            .whereType<int>()
+            .toSet()
+            .toList()
+          ..sort();
+
+    final targetSectionInstructorIds = courseSectionInstructorIds.isNotEmpty
+        ? courseSectionInstructorIds
+        : uniqueSectionInstructorIds;
+
+    if (targetSectionInstructorIds.isNotEmpty) {
+      // Read the currently saved office hours before deciding whether to replace them
+      final existingOfficeHourRows = await supabase
           .from('office_hours')
-          .delete()
-          .eq('section_instructor_id', sectionInstructorId);
+          .select('id, day, start, end')
+          .inFilter('section_instructor_id', targetSectionInstructorIds);
 
-      for (final officeHour in officeHours) {
+      final existingNormalizedOfficeHours = (existingOfficeHourRows as List)
+          .map((row) => (row as Map).cast<String, dynamic>())
+          .map(
+            (row) => StaffOfficeHourInput(
+              day: (row['day'] as String?)?.trim() ?? '',
+              start: (row['start'] as String?)?.trim() ?? '',
+              end: (row['end'] as String?)?.trim() ?? '',
+            ),
+          )
+          .where(
+            (officeHour) =>
+                officeHour.day.isNotEmpty &&
+                officeHour.start.isNotEmpty &&
+                officeHour.end.isNotEmpty,
+          )
+          .toSet()
+          .toList();
+
+      if (_sameOfficeHourSet(
+        existingNormalizedOfficeHours,
+        normalizedOfficeHours,
+      )) {
+        // Staff info may still have changed, so refresh the course view
+        ref.invalidate(myEnrolledCoursesProvider);
+        return;
+      }
+
+      final existingOfficeHourIds = (existingOfficeHourRows as List)
+          .map((row) => ((row as Map)['id'] as num?)?.toInt())
+          .whereType<int>()
+          .toList();
+
+      if (existingOfficeHourIds.isNotEmpty) {
+        await supabase
+            .from('office_hours')
+            .delete()
+            .inFilter('id', existingOfficeHourIds);
+      }
+
+      // Save one shared set of office hours for this staff member in the course
+      final canonicalSectionInstructorId = targetSectionInstructorIds.first;
+      for (final officeHour in normalizedOfficeHours) {
         await supabase.from('office_hours').insert({
-          'day': officeHour.day.trim(),
-          'start': officeHour.start.trim(),
-          'end': officeHour.end.trim(),
-          'section_instructor_id': sectionInstructorId,
+          'day': officeHour.day,
+          'start': officeHour.start,
+          'end': officeHour.end,
+          'section_instructor_id': canonicalSectionInstructorId,
         });
       }
     }

@@ -9,11 +9,18 @@ import 'package:ontario_tech_plus/schedule/courses/providers/courses_provider.da
 import 'package:ontario_tech_plus/schedule/courses/models/course_model.dart';
 import 'package:ontario_tech_plus/schedule/courses/course_enroll_page.dart';
 
-class AddCoursePage extends ConsumerWidget {
+class AddCoursePage extends ConsumerStatefulWidget {
   const AddCoursePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AddCoursePage> createState() => _AddCoursePageState();
+}
+
+class _AddCoursePageState extends ConsumerState<AddCoursePage> {
+  bool _hasAppliedInitialTerm = false;
+
+  @override
+  Widget build(BuildContext context) {
     // Courses and subjects
     final subjectsAsync = ref.watch(courseSubjectOptionsProvider);
     final coursesAsync = ref.watch(filteredCoursesProvider);
@@ -86,6 +93,24 @@ class AddCoursePage extends ConsumerWidget {
                   return const SizedBox.shrink();
                 }
 
+                // Default to the newest available term filter
+                if (!_hasAppliedInitialTerm) {
+                  _hasAppliedInitialTerm = true;
+
+                  if (selectedTerm == null) {
+                    Future.microtask(() {
+                      ref
+                          .read(courseTermFilterProvider.notifier)
+                          .setTerm(terms.first);
+                    });
+                  }
+                }
+
+                final dropdownValue =
+                    _hasAppliedInitialTerm && selectedTerm == null
+                    ? null
+                    : selectedTerm ?? terms.first;
+
                 return Row(
                   children: [
                     const Text(
@@ -95,7 +120,7 @@ class AddCoursePage extends ConsumerWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: DropdownButtonFormField<String?>(
-                        initialValue: selectedTerm,
+                        initialValue: dropdownValue,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),

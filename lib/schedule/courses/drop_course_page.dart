@@ -8,11 +8,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'models/enrolled_courses_model.dart';
 import 'providers/courses_provider.dart'; // myEnrolledCoursesProvider + dropCourseProvider
 
-class DropCoursePage extends ConsumerWidget {
+class DropCoursePage extends ConsumerStatefulWidget {
   const DropCoursePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DropCoursePage> createState() => _DropCoursePageState();
+}
+
+class _DropCoursePageState extends ConsumerState<DropCoursePage> {
+  bool _hasAppliedInitialTerm = false;
+
+  @override
+  Widget build(BuildContext context) {
     // Load enrolled courses for the selected drop-page term filter
     final enrolledAsync = ref.watch(filteredDropEnrolledCoursesProvider);
     // Load available terms for the filter dropdown
@@ -21,6 +28,32 @@ class DropCoursePage extends ConsumerWidget {
     final selectedTerm = ref.watch(dropCoursesTermFilterProvider);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    // Check if intiial term being applied
+    final termOptions = termOptionsAsync.asData?.value;
+    final isApplyingInitialTerm =
+        !_hasAppliedInitialTerm &&
+        termOptions != null &&
+        termOptions.isNotEmpty &&
+        selectedTerm == null;
+
+    if (isApplyingInitialTerm) {
+      // Apply the newest term before the course list is shown
+      Future.microtask(() {
+        ref
+            .read(dropCoursesTermFilterProvider.notifier)
+            .setTerm(termOptions.first);
+        if (mounted) {
+          setState(() => _hasAppliedInitialTerm = true);
+        }
+      });
+    } else if (!_hasAppliedInitialTerm && termOptions != null) {
+      // Mark the initial setup complete when there is nothing to auto-select
+      Future.microtask(() {
+        if (mounted) {
+          setState(() => _hasAppliedInitialTerm = true);
+        }
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text("Drop a Course")),
@@ -35,15 +68,10 @@ class DropCoursePage extends ConsumerWidget {
                   if (terms.isEmpty) {
                     return const SizedBox.shrink();
                   }
-
-                  // Default to the newest enrolled term on first load
-                  if (selectedTerm == null) {
-                    Future.microtask(() {
-                      ref
-                          .read(dropCoursesTermFilterProvider.notifier)
-                          .setTerm(terms.first);
-                    });
-                  }
+                  final dropdownValue =
+                      _hasAppliedInitialTerm && selectedTerm == null
+                      ? null
+                      : selectedTerm ?? terms.first;
 
                   return Row(
                     children: [
@@ -54,7 +82,7 @@ class DropCoursePage extends ConsumerWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: DropdownButtonFormField<String?>(
-                          initialValue: selectedTerm ?? terms.first,
+                          initialValue: dropdownValue,
                           isExpanded: true,
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
@@ -90,193 +118,205 @@ class DropCoursePage extends ConsumerWidget {
               ),
               const SizedBox(height: 18),
               Expanded(
-                child: enrolledAsync.when(
-                  data: (courses) {
-                    // Empty state when there are no courses to drop
-                    if (courses.isEmpty) {
-                      return Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: scheme.surfaceContainerLowest,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.menu_book_outlined,
-                                size: 42,
-                                color: scheme.primary,
-                              ),
-                              const SizedBox(height: 14),
-                              Text(
-                                "No courses to drop",
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
+                // Hold the list until the first term filter is ready
+                child: isApplyingInitialTerm
+                    ? const Center(child: CircularProgressIndicator())
+                    : enrolledAsync.when(
+                        data: (courses) {
+                          // Empty state when there are no courses
+                          if (courses.isEmpty) {
+                            return Center(
+                              child: Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  color: scheme.surfaceContainerLowest,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.menu_book_outlined,
+                                      size: 42,
+                                      color: scheme.primary,
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      "No courses to drop",
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      selectedTerm == null
+                                          ? "You are not enrolled in any courses right now."
+                                          : "No courses found for $selectedTerm.",
+                                      textAlign: TextAlign.center,
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: Colors.grey.shade600,
+                                          ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                selectedTerm == null
-                                    ? "You are not enrolled in any courses right now."
-                                    : "No courses found for $selectedTerm.",
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
+                            );
+                          }
 
-                    return ListView.separated(
-                      itemCount: courses.length + 1,
-                      separatorBuilder: (_, index) =>
-                          SizedBox(height: index == 0 ? 20 : 14),
-                      itemBuilder: (context, i) {
-                        if (i == 0) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Manage Your Enrolment",
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "Select a course below if you want to remove it from your schedule.",
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: Colors.grey.shade600,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                          );
-                        }
+                          // Section title and subtext
+                          return ListView.separated(
+                            itemCount: courses.length + 1,
+                            separatorBuilder: (_, index) =>
+                                SizedBox(height: index == 0 ? 20 : 14),
+                            itemBuilder: (context, i) {
+                              if (i == 0) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Manage Your Enrolment",
+                                      style: theme.textTheme.titleLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      "Select a course below if you want to remove it from your enrolled courses.",
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: Colors.grey.shade600,
+                                            height: 1.4,
+                                          ),
+                                    ),
+                                  ],
+                                );
+                              }
 
-                        final c = courses[i - 1];
+                              final c = courses[i - 1];
 
-                        return Card(
-                          elevation: 2,
-                          margin: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(18),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Column(
+                              // Course cards
+                              return Card(
+                                elevation: 2,
+                                margin: EdgeInsets.zero,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(18),
+                                  child: Row(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        c.title,
-                                        style: theme.textTheme.titleMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w700,
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              c.title,
+                                              style: theme.textTheme.titleMedium
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
                                             ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              c.courseCode,
+                                              style: theme.textTheme.bodyMedium
+                                                  ?.copyWith(
+                                                    color: scheme.primary,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              "Instructor: ${_courseInstructorLabel(c)}",
+                                              style: theme.textTheme.bodyMedium
+                                                  ?.copyWith(
+                                                    color: Colors.grey.shade800,
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              "${c.term} • ${c.subjectCode} (${c.subjectName})",
+                                              style: theme.textTheme.bodyMedium
+                                                  ?.copyWith(
+                                                    color: Colors.grey.shade700,
+                                                    height: 1.35,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        c.courseCode,
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                              color: scheme.primary,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        "Instructor: ${_courseInstructorLabel(c)}",
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                              color: Colors.grey.shade800,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        "${c.term} • ${c.subjectCode} (${c.subjectName})",
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                              color: Colors.grey.shade700,
-                                              height: 1.35,
-                                            ),
+                                      const SizedBox(width: 12),
+                                      IconButton(
+                                        onPressed: () async {
+                                          // Ask for confirmation before removing the course
+                                          final ok = await _confirmDrop(
+                                            context,
+                                            c.title,
+                                          );
+                                          if (ok != true) return;
+
+                                          try {
+                                            // Remove the enrolled course and its selected sections
+                                            await ref
+                                                .read(dropCourseProvider)
+                                                .dropCourse(c.courseId);
+
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    "Dropped ${c.courseCode}",
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          } catch (e) {
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    "Drop failed: $e",
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        },
+                                        icon: Icon(
+                                          Icons.remove_circle_outline,
+                                          color: scheme.error,
+                                        ),
+                                        tooltip: "Drop ${c.courseCode}",
                                       ),
                                     ],
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                IconButton(
-                                  onPressed: () async {
-                                    // Ask for confirmation before removing the course
-                                    final ok = await _confirmDrop(
-                                      context,
-                                      c.title,
-                                    );
-                                    if (ok != true) return;
-
-                                    try {
-                                      // Remove the enrolled course and its selected sections
-                                      await ref
-                                          .read(dropCourseProvider)
-                                          .dropCourse(c.courseId);
-
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              "Dropped ${c.courseCode}",
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text("Drop failed: $e"),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  },
-                                  icon: Icon(
-                                    Icons.remove_circle_outline,
-                                    color: scheme.error,
-                                  ),
-                                  tooltip: "Drop ${c.courseCode}",
-                                ),
-                              ],
+                              );
+                            },
+                          );
+                        },
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (e, _) => Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(
+                              "Failed to load courses: $e",
+                              textAlign: TextAlign.center,
                             ),
                           ),
-                        );
-                      },
-                    );
-                  },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(
-                        "Failed to load courses: $e",
-                        textAlign: TextAlign.center,
+                        ),
                       ),
-                    ),
-                  ),
-                ),
               ),
             ],
           ),
