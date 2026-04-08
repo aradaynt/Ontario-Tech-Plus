@@ -1,4 +1,4 @@
-# Ontario Tech Plus <img src="assets\logos\ModifiedOntarioTechLogo.png" width=30></img>
+<img width="634" height="155" alt="image" src="https://github.com/user-attachments/assets/3ac3ccc7-c7f5-48fb-bf63-356d8b812dd7" /># Ontario Tech Plus <img src="assets\logos\ModifiedOntarioTechLogo.png" width=30></img>
 
 ### Why upgrade the current app?
 
@@ -18,9 +18,12 @@ According to a large portion of the student population, the Ontario Tech Mobile 
     - View Enrolled Courses and Instructors, along with button link to canvas
     - Weekly Schedule Timetable\
 - Navigation
-    - Campus Interactive Map
-    - "Your Are Here" Marker
+    - Interactive Campus Map
+    - Tracks user's current location and heading
+    - Integration with databse for user course schedule
+    - Polyline routing using OSRM API
     - Step-by-Step Directions to Selected Building
+    - Demo of Step by Step Navigation: https://youtube.com/shorts/yGADXiFUeHg
 - Appointments
     - Book Appointment with your Advisors
     - Book Appointments with Professors of your Courses
@@ -71,7 +74,7 @@ flutter run
 |:-:|:-:|
 |Arad Ayntabli|Appointments, Book a Room, Home Screen Widget, Supabase Assistance|
 |Aaron James|Profile, Course Management, Supabase Setup|
-|Ayaan Mustafa|Navigation|
+|Ayaan Mustafa|Maps & Navigation|
 |Sami Khan|QR Codes, Club Recommendation|
 |Teni Adegbite| User Interface, Themes|
 
