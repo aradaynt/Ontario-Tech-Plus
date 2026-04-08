@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map_compass/flutter_map_compass.dart';
 import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
 import 'package:geolocator/geolocator.dart';
@@ -35,6 +36,9 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
 
   // location stream
   StreamSubscription<Position>? _positionStreamSubscription;
+
+  // compass stream for device heading
+  StreamSubscription<CompassEvent>? _compassStreamSubscription;
 
   // FlutterMap controller
   final MapController _mapController = MapController();
@@ -198,7 +202,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     ]),
   ];
 
-  // marker
+  // destination marker
   Marker? _destinationMarker;
 
   // active list of directions for live navigation
@@ -281,8 +285,9 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
           ),
         );
 
-    // define the compass slide transition so that it starts in its normal
-    // position and then slides down with the name box
+    // define the slide down transition used in both the compass and
+    // the course list. starts in its normal position and then
+    // slides down with the name box on when user selects a building
     _onSelectDownSlide =
         Tween<Offset>(
           begin: const Offset(0.0, 0.0),
@@ -365,7 +370,9 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     // as the bottom most element of the stack. All other
     // Widgets are rendered on-top of it.
     return Scaffold(
+      // Map page appbar
       appBar: AppBar(title: Text("Campus Map")),
+      // the stack that forms the root of this widget
       body: Stack(
         children: [
           // The FlutterMap widget that constructs the map
@@ -383,6 +390,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               // OpenStreetMap Licencing and Attribution. Also detect if user
               // has tapped map to disable routing.
               onMapEvent: (event) {
+                // if the event is not an event tht happens when map loads
                 if (event.runtimeType != MapEventNonRotatedSizeChange) {
                   _showAttribution = false;
                   _isClassListVisible = false;
@@ -393,6 +401,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                 // tapping the map
                 if (event is MapEventTap && _isRouting && !_isNavigating) {
                   _selectionAnimationController.reverse().then((_) {
+                    // if the widget is mounted reset all the class fields
                     if (mounted) {
                       setState(() {
                         _isRouting = false;
@@ -486,27 +495,42 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               // the fourth layer is the currentLocationLayer, that displays the
               // users current location and the direction their device is
               // pointing. Uses an alternate icon during navigation.
-              CurrentLocationLayer(
-                alignPositionOnUpdate: AlignOnUpdate.never,
-                alignDirectionOnUpdate: AlignOnUpdate.never,
-                style: LocationMarkerStyle(
-                  marker: _isNavigating
-                      ? DefaultLocationMarker(
-                          color: Colors.white,
-                          child: Icon(
-                            Icons.navigation_sharp,
-                            color: Color(0xFF0077CA),
-                            size: 20,
-                          ),
-                        )
-                      : DefaultLocationMarker(),
-                  markerAlignment: Alignment.center,
-                  markerDirection: MarkerDirection.heading,
-                  markerSize: _isNavigating
-                      ? const Size.square(25)
-                      : Size.square(20),
+              if (_currentPosition != null)
+                AnimatedLocationMarkerLayer(
+                  position: LocationMarkerPosition(
+                    latitude: _currentPosition!["position"].latitude,
+                    longitude: _currentPosition!["position"].longitude,
+                    accuracy: 0, // keeps the circular location boundary hidden
+                  ),
+                  heading: LocationMarkerHeading(
+                    // convert degrees to radians for the marker
+                    heading: degToRadian(_currentPosition!["heading"] ?? 0.0),
+                    // set the width of the direction cone
+                    accuracy: degToRadian(45),
+                  ),
+                  style: LocationMarkerStyle(
+                    showHeadingSector: true,
+                    // ensures the cone is displayed
+                    headingSectorRadius: 40,
+                    // adjusts how far out the cone extends
+                    // if the user is navigating use a different icon
+                    marker: _isNavigating
+                        ? const DefaultLocationMarker(
+                            color: Colors.white,
+                            child: Icon(
+                              Icons.navigation_sharp,
+                              color: Color(0xFF0077CA),
+                              size: 20,
+                            ),
+                          )
+                        : const DefaultLocationMarker(),
+                    markerAlignment: Alignment.center,
+                    markerDirection: MarkerDirection.heading,
+                    markerSize: _isNavigating
+                        ? const Size.square(25)
+                        : const Size.square(20),
+                  ),
                 ),
-              ),
               // polyline layer that represents the route between the users
               // current position and their destination
               if (_isRouting)
@@ -539,7 +563,9 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                       );
                     },
                   ),
-              // the Attribution Layer used to credit the map provider
+              // the attribution layer used to credit the map provider
+              // hides attribution layer after user interacts with the map
+              // which is allowed under OSM and OSRM
               if (_showAttribution)
                 SimpleAttributionWidget(
                   source: Text(
@@ -586,7 +612,6 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                     child: Column(
                       children: [
                         // row that displays the building name and the dismiss
-                        // button
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -606,7 +631,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                                 _selectionAnimationController.reverse().then((
                                   _,
                                 ) {
-                                  // ait until the animation finishes,
+                                  // wait until the animation finishes,
                                   // then clear the state
                                   if (mounted) {
                                     setState(() {
@@ -662,7 +687,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                             Expanded(
                               child: Builder(
                                 builder: (context) {
-                                  // Fetch the list once per build to improve performance
+                                  // Fetch the list once per build to improve
+                                  // performance
                                   final classList = _classesInBuilding();
 
                                   return ListView.builder(
@@ -725,10 +751,12 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                         _mapController.move(_currentPosition!["position"], 17);
                       }
 
+                      // update the camera position
                       setState(() {
                         _cameraPosition = _currentPosition!["position"];
                       });
 
+                      // call the check if centered
                       _checkIfCentered();
                     },
                     child: Icon(
@@ -749,6 +777,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               child: Padding(
                 padding: EdgeInsetsGeometry.all(10),
                 child: ElevatedButton(
+                  // on press forward the begin navigation animation
+                  // and reverse the select navigation animation
                   onPressed: () {
                     _beginNavAnimationController.forward();
                     _selectionAnimationController.reverse();
@@ -789,6 +819,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
+                    // on press reverse begin navigation animation
+                    // and then reset variables
                     onPressed: () {
                       _beginNavAnimationController.reverse().then((_) {
                         setState(() {
@@ -993,8 +1025,9 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     _routeAnimationController.dispose();
     _beginNavAnimationController.dispose();
 
-    // dispose of position stream
+    // dispose of streams
     _positionStreamSubscription?.cancel();
+    _compassStreamSubscription?.cancel();
     super.dispose();
   }
 
@@ -1007,41 +1040,69 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       return;
     }
 
+    // listen to Compass Sensor for real-time device rotation ---
+    _compassStreamSubscription = FlutterCompass.events?.listen((
+      CompassEvent event,
+    ) {
+      if (event.heading != null && mounted) {
+        setState(() {
+          // If position is loaded, update just the heading
+          if (_currentPosition != null) {
+            _currentPosition!["heading"] = event.heading;
+          }
+        });
+      }
+    });
+
     // get position stream
     _positionStreamSubscription =
         // create position stream and set location settings
         Geolocator.getPositionStream(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.high,
-            distanceFilter: 1,
+            distanceFilter: 3,
           ),
-          //   listen for position events
+          // listen for position events
         ).listen((Position position) {
           // update position
           setState(() {
-            _currentPosition = {
-              "position": LatLng(position.latitude, position.longitude),
-              "heading": position.heading,
-            };
+            if (_currentPosition == null) {
+              // first time getting location, set both position and
+              // heading
+              _currentPosition = {
+                "position": LatLng(position.latitude, position.longitude),
+                "heading": position.heading,
+              };
+            } else {
+              // Only update position, let compass handle heading
+              _currentPosition!["position"] = LatLng(
+                position.latitude,
+                position.longitude,
+              );
+            }
           });
 
+          // check if the compass is centered on the users current location
           _checkIfCentered();
 
           if (_isNavigating && _selectedBuilding != null) {
-            // --- DYNAMIC POLYLINE UPDATE ---
-            // Calculate the closest route point ahead and stretch the polyline to seamlessly start at the user
+            // Calculate the closest route point ahead and stretch the polyline
+            // to seamlessly start at the user
             if (_fullRoutePoints.isNotEmpty) {
               LatLng currentLoc = _currentPosition!["position"];
-              int lookahead =
-                  20; // Bound the search to prevent skipping over overlapping loops
+              // Bound the search to prevent skipping over overlapping loops
+              int lookahead = 20;
               int maxIndex =
                   (_currentRouteIndex + lookahead < _fullRoutePoints.length)
                   ? _currentRouteIndex + lookahead
                   : _fullRoutePoints.length;
 
+              // set up loop variables
               double minDistance = double.infinity;
               int bestIndex = _currentRouteIndex;
 
+              // loop over all the navigation step indexes to find
+              // closes point to user
               for (int i = _currentRouteIndex; i < maxIndex; i++) {
                 double dist = Geolocator.distanceBetween(
                   currentLoc.latitude,
@@ -1055,8 +1116,10 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                 }
               }
 
+              // set the current route navigation step index as the closest one
               _currentRouteIndex = bestIndex;
 
+              // update the active route points
               setState(() {
                 // Pin the start exactly to the current user location and seamlessly append the remaining path
                 _activeRoutePoints = [
@@ -1066,7 +1129,8 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               });
             }
 
-            // 1. Check if the user has reached the final building (within 15 meters)
+            // check if the user has reached the final building
+            // (within 30 meters)
             double distanceToDest = Geolocator.distanceBetween(
               position.latitude,
               position.longitude,
@@ -1074,10 +1138,12 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               _selectedBuilding!.centre.longitude,
             );
 
-            if (distanceToDest < 15.0) {
+            // if they are close to the building or out of route steps
+            // end navigation and handle their arrival
+            if (distanceToDest < 30.0 || _activeDirections.isEmpty) {
               _handleArrival();
             }
-            // 2. Check if the user completed the next step (within 15 meters)
+            // check if the user completed the next step (within 10 meters)
             else if (_activeDirections.isNotEmpty) {
               LatLng nextStep = _activeDirections[0]["location"];
               double distanceToStep = Geolocator.distanceBetween(
@@ -1088,21 +1154,16 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
               );
 
               if (distanceToStep < 15.0) {
-                // Grab the completed step and remove it from the underlying data
+                // grab the completed step and remove it from the
+                // list of active navigation steps
                 final completedStep = _activeDirections.removeAt(0);
 
                 // Trigger the exit animation
                 _listKey.currentState?.removeItem(
                   0,
-                  (context, animation) => _buildStepItem(
-                    completedStep,
-                    animation,
-                    isSpecial:
-                        true, // It was the top item, so keep its highlight color as it fades
-                  ),
-                  duration: const Duration(
-                    milliseconds: 500,
-                  ), // Adjust animation speed here
+                  (context, animation) =>
+                      _buildStepItem(completedStep, animation, isSpecial: true),
+                  duration: const Duration(milliseconds: 500),
                 );
               }
             }
@@ -1117,7 +1178,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
     bool serviceEnabled;
     LocationPermission permission;
 
-    // Test if location services are enabled.
+    // test if location services are enabled.
     serviceEnabled = await _geolocatorPlatform.isLocationServiceEnabled();
     if (!serviceEnabled) {
       // the service is not enabled
@@ -1150,12 +1211,14 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   // method that selects a building a user has tapped or
   // selects the building that their course takes place in
   void _selectBuilding({String? buildingName}) {
+    // if no building name was given check for polygon hits
     Building? tappedBuilding;
     if (buildingName == null) {
       tappedBuilding = _polygonHtNotifier.value?.hitValues.isNotEmpty == true
           ? _polygonHtNotifier.value!.hitValues[0]
           : null;
     } else {
+      // otherwise get the building that was tapped
       for (Building building in _buildings) {
         if (building.name == buildingName) {
           tappedBuilding = building;
@@ -1163,9 +1226,11 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       }
     }
 
+    // if a building was tapped
     if (tappedBuilding != null) {
       if (tappedBuilding.name == _selectedBuilding?.name) {
-        // Tapping the same building: toggle routing and reverse animations
+        // tapping the same building toggles the routing and
+        // reverse the animations
         _routeAnimationController.reverse();
         _selectionAnimationController.reverse().then((_) {
           if (mounted) {
@@ -1203,12 +1268,12 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
                   _currentPosition!["position"],
                   _selectedBuilding!.centre,
                 )..then((routeData) {
-                  // Populate our state list once the future completes
+                  // populate state list once the future completes
                   if (mounted && _isRouting) {
                     setState(() {
                       _activeDirections = List.from(routeData["directions"]);
 
-                      // Extract LatLng points to control the dynamic drawing
+                      // extract LatLng points to control the dynamic drawing
                       _fullRoutePoints = [];
                       for (var point in routeData["points"]) {
                         _fullRoutePoints.add(
@@ -1233,6 +1298,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
   void _checkIfCentered() {
     if (_currentPosition == null || _cameraPosition == null) return;
 
+    // get distance between camera center and user location
     double distance = Geolocator.distanceBetween(
       _currentPosition!["position"].latitude,
       _currentPosition!["position"].longitude,
@@ -1240,15 +1306,19 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       _cameraPosition!.longitude,
     );
 
+    // if the distance is within a specific threshold pla
+    // y recenter animation
     if (!_showAttribution && distance > 5) {
       _recenterAnimationController.forward();
     } else {
+      // otherwise reverse animation
       _recenterAnimationController.reverse();
     }
   }
 
+  // helper method that handles the the uer arriving at their destination
   void _handleArrival() {
-    // Show a success message
+    // show a success message
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("You have reached your destination!"),
@@ -1257,7 +1327,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       ),
     );
 
-    // Close out of navigation and reset state
+    // end navigation and reset state
     _beginNavAnimationController.reverse().then((_) {
       setState(() {
         _isNavigating = false;
@@ -1273,6 +1343,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       });
     });
 
+    // reverse the selection animation
     _selectionAnimationController.reverse();
   }
 
@@ -1442,7 +1513,7 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
       }
     }
 
-    // if the amount of days is 1 use Minute
+    // if the amount of minutes is 1 use Minute
     // otherwise use Minutes
     if (duration.inMinutes != 0) {
       if (output.isNotEmpty) {
@@ -1620,12 +1691,15 @@ class _MapsPageState extends State<MapsPage> with TickerProviderStateMixin {
         }
 
         // OSRM returns coordinates in [longitude, latitude] format
-        var location = step["maneuver"]["location"];
+        List<dynamic> coords = step["maneuver"]["location"];
+
+        // turn coords into Latlng object
+        LatLng maneuverLocation = LatLng(coords[1], coords[0]);
 
         directions.add({
           "distance": dist,
           "maneuver": step["maneuver"]["modifier"],
-          "location": location,
+          "location": maneuverLocation,
         });
       }
 

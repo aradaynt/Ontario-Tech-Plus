@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../profile/profile_model.dart';
 import '../student.dart';
 import 'appointment_landing.dart';
 
 class EmailPage extends StatefulWidget {
   final Instructor? instructor;
   final Advisor? advisor;
-  final Student student;
+  final Profile profile;
   final Dates date;
   final String? week;
 
@@ -17,7 +18,7 @@ class EmailPage extends StatefulWidget {
     super.key,
     this.instructor,
     this.advisor,
-    required this.student,
+    required this.profile,
     required this.date,
     required this.week,
   });
@@ -169,8 +170,6 @@ class _EmailPageState extends State<EmailPage> {
                   try {
                     final supabase = Supabase.instance.client;
 
-                    final userId = supabase.auth.currentUser!.id;
-
                     final isAdvisor = widget.advisor != null;
 
                     final targetId = isAdvisor
@@ -189,7 +188,7 @@ class _EmailPageState extends State<EmailPage> {
 
                     await supabase.from(targetTable).insert({
                       targetColumn: targetId,
-                      'student_id': widget.student.studentid,
+                      'student_id': int.parse(widget.profile.studentNumber),
                       'start': formatTime(widget.date.start),
                       'end': formatTime(widget.date.end),
                       'date': _formatDateForSupabase(widget.week),
@@ -207,8 +206,8 @@ class _EmailPageState extends State<EmailPage> {
                         'subject': subject,
                         'message':
                             "${courseLine}Appointment for: \n${widget.week}\n${widget.date.toString()}\nReason for this appointment is: \n$body",
-                        'user_email': widget.student.email,
-                        'name': widget.student.name,
+                        'user_email': widget.profile.email,
+                        'name': widget.profile.fullName,
                       },
                       emailjs.Options(
                         publicKey: '3NwU3xKGeU3nLblXw',

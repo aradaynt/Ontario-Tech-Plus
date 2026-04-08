@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:ontario_tech_plus/appointments/week_selector.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../profile/profile_model.dart';
 import '../student.dart';
 
 class CourseAppointmentPage extends StatefulWidget {
-  final Student student;
-  const CourseAppointmentPage({super.key, required this.student});
+  final Profile profile;
+  const CourseAppointmentPage({super.key, required this.profile});
 
   @override
   State<CourseAppointmentPage> createState() => _CourseAppointmentPageState();
@@ -21,13 +22,27 @@ class _CourseAppointmentPageState extends State<CourseAppointmentPage> {
   int selectedInstructorIndex = -1;
   int selectedDateIndex = -1;
 
-  late Student student1;
+  late Profile profile;
 
   @override
   void initState() {
     super.initState();
-    student1 = widget.student;
+    profile = widget.profile;
     _initializeData();
+  }
+
+  String _getCurrentTerm() {
+    final now = DateTime.now();
+    final month = now.month;
+    final year = now.year;
+
+    if (month >= 1 && month <= 5) {
+      return "Winter $year";
+    }
+    //(Treating June-August as Fall prep)
+    else {
+      return "Fall $year";
+    }
   }
 
   Future<void> _initializeData() async {
@@ -39,10 +54,13 @@ class _CourseAppointmentPageState extends State<CourseAppointmentPage> {
         throw Exception("User is not logged in!");
       }
 
+      final currentTerm = _getCurrentTerm();
+
       final enrolledResponse = await supabase
           .from('student_enrolled_courses')
-          .select('courses (*)')
-          .eq('user_id', user.id);
+          .select('courses!inner (*)')
+          .eq('user_id', user.id)
+          .eq('courses.term', currentTerm);
 
       final fetchedCourses = enrolledResponse
           .map((e) => e['courses'] as Map<String, dynamic>)
@@ -359,7 +377,7 @@ class _CourseAppointmentPageState extends State<CourseAppointmentPage> {
                           builder: (context) => WeekSelection(
                             instructor:
                                 courseInstructors[selectedInstructorIndex],
-                            student: student1,
+                            profile: profile,
                             date: courseInstructors[selectedInstructorIndex]
                                 .officehours[selectedDateIndex],
                           ),

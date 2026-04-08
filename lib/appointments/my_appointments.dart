@@ -2,7 +2,7 @@ import "package:flutter/material.dart";
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
-import '../student.dart';
+import '../profile/profile_model.dart';
 
 class appointments {
   final dynamic id;
@@ -39,8 +39,8 @@ class appointments {
 }
 
 class MyAppointmentsPage extends StatefulWidget {
-  final Student student;
-  const MyAppointmentsPage({super.key, required this.student});
+  final Profile profile;
+  const MyAppointmentsPage({super.key, required this.profile});
 
   @override
   State<MyAppointmentsPage> createState() => _MyAppointmentsPageState();
@@ -50,7 +50,7 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
   bool _isLoading = true;
   List<appointments> myAdvisorAppointments = [];
   List<appointments> myCourseAppointments = [];
-  late Student student1 = widget.student;
+  late Profile profile = widget.profile;
   Set<appointments> selectedAppointments = {};
 
   @override
@@ -66,7 +66,7 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
       final response = await supabase
           .from('advisor_booked')
           .select('id,date, start, end, advisors(name)')
-          .eq('student_id', student1.studentid);
+          .eq('student_id', int.parse(profile.studentNumber));
 
       final List<appointments> fetched = (response as List).map((row) {
         return appointments(
@@ -99,19 +99,17 @@ class _MyAppointmentsPageState extends State<MyAppointmentsPage> {
           date, 
           start, 
           end, 
-          office_hours (
-            section_instructors (
-              instructor (
-                name
-              )
-            )
+          instructor:prof_id (
+            name
           )
         ''')
-          .eq('student_id', student1.studentid);
+          .eq('student_id', int.parse(profile.studentNumber));
 
       final List<appointments> fetched = (response as List).map((row) {
-        final instructorName =
-            row['office_hours']['section_instructors']['instructor']['name'];
+        final instructorData = row['instructor'];
+        final instructorName = instructorData != null
+            ? instructorData['name']
+            : null;
 
         return appointments(
           id: row['id'],

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../profile/profile_model.dart';
 import '../student.dart';
 import 'email_page.dart';
 
 class SpecificTime extends StatefulWidget {
   final Instructor? instructor;
   final Advisor? advisor;
-  final Student student;
+  final Profile profile;
   final Dates date;
   final String? weekLabel; // Month, Day, Year. Like America
 
@@ -15,7 +16,7 @@ class SpecificTime extends StatefulWidget {
     super.key,
     this.instructor,
     this.advisor,
-    required this.student,
+    required this.profile,
     required this.date,
     this.weekLabel,
   });
@@ -268,7 +269,7 @@ class _SpecificTimeState extends State<SpecificTime> {
                             builder: (context) => EmailPage(
                               instructor: widget.instructor,
                               advisor: widget.advisor,
-                              student: widget.student,
+                              profile: widget.profile,
                               date: timeslots[selectedTime],
                               week: widget.weekLabel,
                             ),

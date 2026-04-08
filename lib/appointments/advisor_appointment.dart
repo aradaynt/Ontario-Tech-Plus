@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ontario_tech_plus/appointments/week_selector.dart';
+import '../profile/profile_model.dart';
 import '../student.dart';
 
 class AdvisorAppointmentPage extends StatefulWidget {
-  final Student student;
-  const AdvisorAppointmentPage({super.key, required this.student});
+  final Profile profile;
+  const AdvisorAppointmentPage({super.key, required this.profile});
 
   @override
   State<AdvisorAppointmentPage> createState() => _AdvisorAppointmentPageState();
@@ -17,12 +18,12 @@ class _AdvisorAppointmentPageState extends State<AdvisorAppointmentPage> {
   int selectedIndex = -1;
   int selectedDate = -1;
 
-  late Student student1;
+  late Profile profile;
 
   @override
   void initState() {
     super.initState();
-    student1 = widget.student;
+    profile = widget.profile;
     _fetchAdvisorData();
   }
 
@@ -36,7 +37,7 @@ class _AdvisorAppointmentPageState extends State<AdvisorAppointmentPage> {
             id, name, email, faculty, office,
             advisor_office_hours (id, day, start, end)
           ''')
-          .eq('faculty', student1.faculty.toLowerCase());
+          .eq('faculty', profile.faculty.toLowerCase());
 
       final List<Advisor> fetchedAdvisors = [];
 
@@ -238,7 +239,7 @@ class _AdvisorAppointmentPageState extends State<AdvisorAppointmentPage> {
                         MaterialPageRoute(
                           builder: (context) => WeekSelection(
                             advisor: advisors[selectedIndex],
-                            student: student1,
+                            profile: profile,
                             date: advisors[selectedIndex]
                                 .officehours[selectedDate],
                           ),
