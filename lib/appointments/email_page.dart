@@ -137,7 +137,7 @@ class _EmailPageState extends State<EmailPage> {
               child: Padding(
                 padding: const EdgeInsets.all(4.0),
                 child: TextFormField(
-                  minLines: 20,
+                  minLines: 15,
                   maxLines: null,
                   controller: _bodyController,
                   decoration: InputDecoration(
@@ -254,6 +254,7 @@ class _EmailPageState extends State<EmailPage> {
                 child: const Text("Send"),
               ),
             ),
+          SizedBox(height: 20),
         ],
       ),
     );
