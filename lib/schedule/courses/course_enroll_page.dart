@@ -171,9 +171,10 @@ class _CourseEnrollPageState extends ConsumerState<CourseEnrollPage> {
 
                 const SizedBox(height: 16),
 
-                // Enroll button
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 24),
+                // Keep the action clear of system navigation bars.
+                SafeArea(
+                  top: false,
+                  minimum: const EdgeInsets.only(top: 16, bottom: 16),
                   child: ElevatedButton.icon(
                     onPressed: _isSaving
                         ? null
