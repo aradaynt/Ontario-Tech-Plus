@@ -1,8 +1,6 @@
 // OntarioTechPlus - main.dart
-// NOTE: You must have a `.env` file in the project root.
-// Initializes the app and Supabase using values from `.env`.
-import 'dart:async';
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -10,20 +8,26 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:ontario_tech_plus/core/widget_manager.dart';
 
-// Pages
-import 'package:ontario_tech_plus/home/settings_page.dart';
-import 'package:ontario_tech_plus/recs(ml)/reccomendation_pages.dart';
-import 'package:ontario_tech_plus/auth/login_page.dart';
+// Providers
 import 'package:ontario_tech_plus/auth/auth_providers.dart';
+import 'package:ontario_tech_plus/theme/theme_provider.dart';
+import 'package:ontario_tech_plus/settings/settings_provider.dart';
+
+// Pages
+import 'package:ontario_tech_plus/auth/login_page.dart';
 import 'package:ontario_tech_plus/auth/password_reset_entry_page.dart';
+import 'package:ontario_tech_plus/shell_page.dart';
+import 'package:ontario_tech_plus/home/settings_page.dart';
 import 'package:ontario_tech_plus/profile/profile_page.dart';
 import 'package:ontario_tech_plus/schedule/courses/my_courses_page.dart';
-import 'package:ontario_tech_plus/schedule/courses/course_management_page.dart';
 import 'package:ontario_tech_plus/schedule/view_my_schedule_page.dart';
+import 'package:ontario_tech_plus/schedule/courses/course_management_page.dart';
 import 'package:ontario_tech_plus/schedule/courses/add_course_page.dart';
 import 'package:ontario_tech_plus/schedule/courses/drop_course_page.dart';
-import 'package:ontario_tech_plus/shell_page.dart'; // Shell for bottom navigation
-import 'package:ontario_tech_plus/theme/theme_provider.dart'; // Riverpod theme provider
+import 'package:ontario_tech_plus/recs(ml)/reccomendation_pages.dart';
+
+import 'home/menu_page.dart';
+import 'home/search_page.dart';
 
 @pragma('vm:entry-point')
 Future<void> interactiveCallback(Uri? data) async {
@@ -32,31 +36,40 @@ Future<void> interactiveCallback(Uri? data) async {
   }
 }
 
-// Global navigator key used to open pages outside normal context (Password reset entry)
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
-  // Ensure Flutter bindings are ready before async initialization.
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables from project root `.env`.
   await dotenv.load(fileName: '.env');
 
-  // Initialize Supabase client at app startup.
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL'] ?? '',
     anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
   );
 
-  // Register background callback for HomeWidget
   HomeWidget.registerInteractivityCallback(interactiveCallback);
-
-  // Update widget immediately on startup
   await WidgetManager.updateNextClassWidget();
 
-  // ProviderScope is required for Riverpod providers.
   runApp(const ProviderScope(child: MyApp()));
 }
+
+// ================= FONT SCALE =================
+
+double getFontScale(FontSizeOption option) {
+  switch (option) {
+    case FontSizeOption.small:
+      return 0.85;
+    case FontSizeOption.medium:
+      return 1.0;
+    case FontSizeOption.large:
+      return 1.2;
+    case FontSizeOption.extraLarge:
+      return 1.4;
+  }
+}
+
+// ================= APP =================
 
 class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
@@ -65,7 +78,6 @@ class MyApp extends ConsumerStatefulWidget {
   ConsumerState<MyApp> createState() => _MyAppState();
 }
 
-// This actively listens for the password reset email call back link, and will direct to password reset entry page
 class _MyAppState extends ConsumerState<MyApp> {
   StreamSubscription<AuthState>? _authSubscription;
   bool _passwordRecoveryRouteOpen = false;
@@ -74,15 +86,14 @@ class _MyAppState extends ConsumerState<MyApp> {
   void initState() {
     super.initState();
 
-    // Subscribe to lsiten for change
     _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
       data,
     ) {
       if (data.event == AuthChangeEvent.passwordRecovery &&
           !_passwordRecoveryRouteOpen) {
         _passwordRecoveryRouteOpen = true;
+
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          // Route to the password reset entry page
           rootNavigatorKey.currentState?.pushNamed('/password_reset_entry');
         });
       }
@@ -102,29 +113,38 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    final ref = this.ref;
-    // Watch auth state to decide whether to show shell or login page.
     final authState = ref.watch(authStateProvider);
-    // Watch current app theme mode and computed ThemeData.
-    final appThemeMode = ref.watch(themeProvider);
+    final themeModeState = ref.watch(themeProvider);
     final themeData = ref.watch(themeProvider.notifier).themeData;
+
+    final settings = ref.watch(settingsProvider);
+    final fontScale = getFontScale(settings.fontSize);
 
     return MaterialApp(
       navigatorKey: rootNavigatorKey,
-      // App title
       title: 'Ontario Tech Plus',
-      // Active app theme from Riverpod theme provider.
-      theme: themeData.copyWith(useMaterial3: true),
+      debugShowCheckedModeBanner: false,
+
+      theme: themeData.copyWith(
+        useMaterial3: true,
+        textTheme: themeData.textTheme.apply(fontSizeFactor: fontScale),
+      ),
+
       darkTheme: ThemeData.dark().copyWith(
         useMaterial3: true,
         primaryColor: const Color(0xFF003C71),
+        textTheme: ThemeData.dark().textTheme.apply(fontSizeFactor: fontScale),
       ),
-      // Use Flutter ThemeMode.dark only for dark mode; other custom modes map to light.
-      themeMode: appThemeMode == AppThemeMode.dark
+
+      themeMode: themeModeState == AppThemeMode.dark
           ? ThemeMode.dark
           : ThemeMode.light,
 
-      // App routes
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaleFactor: fontScale),
+        child: child!,
+      ),
+
       routes: {
         '/profile': (_) => const ProfilePage(),
         '/courses': (_) => const MyCoursesPage(),
@@ -136,16 +156,28 @@ class _MyAppState extends ConsumerState<MyApp> {
         '/schedule': (_) => const ViewMySchedulePage(),
         '/settings': (_) => const SettingsPage(),
         '/password_reset_entry': (_) => const PasswordResetEntryPage(),
+        '/shell': (_) => const ShellPage(),
+        '/search': (_) => const SearchPage(),
+        '/menu': (_) => const MenuPage(),
+
+        // Placeholder routes
+        '/health': (_) => const Scaffold(body: Center(child: Text("Health"))),
+        '/it': (_) => const Scaffold(body: Center(child: Text("IT Services"))),
+        '/library': (_) => const Scaffold(body: Center(child: Text("Library"))),
+        '/financial_aid': (_) =>
+            const Scaffold(body: Center(child: Text("Aid"))),
+        '/finances_undergrad': (_) =>
+            const Scaffold(body: Center(child: Text("UG Finances"))),
+        '/finances_grad': (_) =>
+            const Scaffold(body: Center(child: Text("Grad Finances"))),
       },
 
-      // Routing based on Supabase auth session state.
       home: authState.when(
         data: (session) =>
             session != null ? const ShellPage() : const LoginPage(),
         loading: () =>
             const Scaffold(body: Center(child: CircularProgressIndicator())),
-        error: (_, _) =>
-            const LoginPage(), // If theres some type of session error, just go to login page
+        error: (_, _) => const LoginPage(),
       ),
     );
   }

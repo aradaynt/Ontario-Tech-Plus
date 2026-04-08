@@ -1,117 +1,196 @@
-// OntarioTechPlus - home_page.dart
-
-// This is the main dashboard page that displays the users name, student number
-// and provides navigation to main sections of the app.
+// OntarioTechPlus - home_page
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ontario_tech_plus/auth/auth_providers.dart';
 import 'package:ontario_tech_plus/profile/profile_provider.dart';
+import 'package:ontario_tech_plus/home/app_drawer.dart';
+
+import '../QRcodes/scan_qr.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // get the profile data, and will reactively rebuild on changes (Currently housed in user_provider.dart)
     final profileAsync = ref.watch(profileProvider);
 
-    // Handle loading, error and data states
     return profileAsync.when(
-      // Show a spinner when loading profile data
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
 
-      // Show error message if profile cant be loaded
-      error: (error, _) => Scaffold(
+      error: (_, __) => const Scaffold(
         body: Center(
           child: Text(
             "Error loading profile",
-            style: const TextStyle(color: Colors.red),
+            style: TextStyle(color: Colors.red),
           ),
         ),
       ),
 
-      // Profile load success
       data: (profile) {
-        // If no profile data found
         if (profile == null) {
           return const _MissingProfileScaffold();
         }
 
-        // ================== Build the page ======================
         return Scaffold(
+          drawer: const AppDrawer(),
+
+          // =================  HEADER =================
           appBar: AppBar(
-            title: const Text("Dashboard"),
+            toolbarHeight: 90,
+            backgroundColor: const Color(0xFF0055B7),
+            elevation: 0,
+
+            leading: Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+            ),
+
             actions: [
-              // Go to profile
               IconButton(
                 icon: const Icon(Icons.person),
-                onPressed: () {
-                  Navigator.pushNamed(context, '/profile');
-                },
+                onPressed: () => Navigator.pushNamed(context, '/profile'),
               ),
             ],
-          ),
 
-          // Main body with padding
-          body: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
+            title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // ================== Welcome Section ======================
+                const Text(
+                  "Welcome back,",
+                  style: TextStyle(fontSize: 14, color: Colors.white70),
+                ),
+                const SizedBox(height: 4),
                 Text(
-                  "Welcome ${profile.firstname} ${profile.lastname} 👋",
+                  "${profile.firstname} ${profile.lastname}",
                   style: const TextStyle(
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 2),
                 Text(
-                  "Student Number: ${profile.studentNumber}",
-                  style: const TextStyle(fontSize: 16),
+                  "Student #: ${profile.studentNumber}",
+                  style: const TextStyle(fontSize: 13, color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+
+          // ================= BODY =================
+          body: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // HEADER EXTENSION
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF0055B7), Color(0xFF00AEEF)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: const Text(
+                    "Quick Actions",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
 
-                const SizedBox(height: 30),
-
-                // ================== Navigation Cards ======================
-                Expanded(
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
+                // ================= CONTENT =================
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _MenuCard(
-                        icon: Icons.book,
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: const Color(0xFF0055B7),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              "Notifications",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              "No new notifications",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      _MobileFeatureCard(
                         title: "Courses",
+                        subtitle: "View your courses",
+                        icon: Icons.book,
+                        color: const Color(0xFF0055B7),
+                        onTap: () => Navigator.pushNamed(context, '/courses'),
+                      ),
+                      const SizedBox(height: 12),
+
+                      _MobileFeatureCard(
+                        title: "QR Code Scanner",
+                        subtitle: "Scan QR Code",
+                        icon: Icons.qr_code,
+                        color: const Color(0xFF00AEEF),
                         onTap: () {
-                          Navigator.pushNamed(context, '/courses');
+                          Navigator.of(context, rootNavigator: true).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ScanQRPage(),
+                            ),
+                          );
                         },
                       ),
-                      _MenuCard(
-                        icon: Icons.grade,
-                        title: "Club Recommendations",
-                        onTap: () {
-                          Navigator.pushNamed(context, '/recommendations');
-                        },
-                      ),
-                      _MenuCard(
-                        icon: Icons.schedule,
+                      const SizedBox(height: 12),
+
+                      _MobileFeatureCard(
                         title: "Schedule",
-                        onTap: () {
-                          Navigator.pushNamed(context, '/schedule');
-                        },
+                        subtitle: "See your timetable",
+                        icon: Icons.schedule,
+                        color: const Color(0xFFFF6F00),
+                        onTap: () => Navigator.pushNamed(context, '/schedule'),
                       ),
-                      _MenuCard(
-                        icon: Icons.settings,
+                      const SizedBox(height: 12),
+
+                      _MobileFeatureCard(
                         title: "Settings",
-                        onTap: () {
-                          Navigator.pushNamed(context, '/settings');
-                        },
+                        subtitle: "Manage preferences",
+                        icon: Icons.settings,
+                        color: const Color(0xFF0055B7),
+                        onTap: () => Navigator.pushNamed(context, '/settings'),
                       ),
+
+                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
@@ -124,8 +203,8 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-// Used to handle a situation where a user logs in but their profile data is missing, causing error
-// Now displays an error message, and allows them to logout
+// ================= MISSING PROFILE =================
+
 class _MissingProfileScaffold extends ConsumerStatefulWidget {
   const _MissingProfileScaffold();
 
@@ -138,7 +217,6 @@ class _MissingProfileScaffoldState
     extends ConsumerState<_MissingProfileScaffold> {
   bool _isSigningOut = false;
 
-  // Allow the user to leave the broken account state safely by signing out
   Future<void> _signOut() async {
     setState(() => _isSigningOut = true);
 
@@ -161,7 +239,6 @@ class _MissingProfileScaffoldState
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                // Error displayed
                 'There seems an issue with your account.\nPlease contact administration.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 16),
@@ -185,37 +262,80 @@ class _MissingProfileScaffoldState
   }
 }
 
-// ================== Reusable Menu Card Widget ======================
+// ================= FEATURE CARD =================
 
-class _MenuCard extends StatelessWidget {
-  final IconData icon;
+class _MobileFeatureCard extends StatelessWidget {
   final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
   final VoidCallback onTap;
 
-  const _MenuCard({
-    required this.icon,
+  const _MobileFeatureCard({
     required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return InkWell(
+      borderRadius: BorderRadius.circular(20),
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
       child: Ink(
+        width: screenWidth - 32,
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: Theme.of(context).colorScheme.primaryContainer,
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            colors: [color.withOpacity(0.85), color.withOpacity(0.6)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
           children: [
-            Icon(icon, size: 40),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white24,
+              ),
+              child: Icon(icon, size: 36, color: Colors.white),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: const TextStyle(color: Colors.white70)),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white70,
+              size: 18,
             ),
           ],
         ),

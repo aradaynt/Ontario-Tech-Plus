@@ -1,82 +1,196 @@
-// OntarioTechPlus - theme_provider.dart
+// OntarioTechPlus - theme_provider
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// Enum for theme modes
 enum AppThemeMode { light, dark, lessSaturated }
 
-// Notifier for managing theme (Riverpod 3 style)
+class AppColors {
+  static const futureBlue = Color(0xFF0055B7);
+  static const techBlue = Color(0xFF00AEEF);
+  static const techTangerine = Color(0xFFFF6F00);
+
+  static const lightBackground = Color(0xFFF6F7F9);
+  static const mutedBackground = Color(0xFFE8EAED);
+
+  static const cardLight = Colors.white;
+  static const cardMuted = Color(0xFFF1F2F4);
+
+  static const textDark = Color(0xFF1F2933);
+  static const textMuted = Color(0xFF5B6770);
+  static const textWhite = Colors.white;
+}
+
+class NotificationsCardTheme extends ThemeExtension<NotificationsCardTheme> {
+  final Color backgroundColor;
+  final Color titleColor;
+  final Color bodyColor;
+
+  const NotificationsCardTheme({
+    required this.backgroundColor,
+    required this.titleColor,
+    required this.bodyColor,
+  });
+
+  @override
+  NotificationsCardTheme copyWith({
+    Color? backgroundColor,
+    Color? titleColor,
+    Color? bodyColor,
+  }) {
+    return NotificationsCardTheme(
+      backgroundColor: backgroundColor ?? this.backgroundColor,
+      titleColor: titleColor ?? this.titleColor,
+      bodyColor: bodyColor ?? this.bodyColor,
+    );
+  }
+
+  @override
+  NotificationsCardTheme lerp(
+    ThemeExtension<NotificationsCardTheme>? other,
+    double t,
+  ) {
+    if (other is! NotificationsCardTheme) return this;
+    return NotificationsCardTheme(
+      backgroundColor: Color.lerp(backgroundColor, other.backgroundColor, t)!,
+      titleColor: Color.lerp(titleColor, other.titleColor, t)!,
+      bodyColor: Color.lerp(bodyColor, other.bodyColor, t)!,
+    );
+  }
+}
+
 class ThemeNotifier extends Notifier<AppThemeMode> {
   @override
   AppThemeMode build() => AppThemeMode.light;
 
   void setTheme(AppThemeMode mode) => state = mode;
 
-  void cycleTheme() {
+  ThemeData get themeData {
+    final baseLight = ThemeData.light().textTheme;
+    final baseDark = ThemeData.dark().textTheme;
+
     switch (state) {
       case AppThemeMode.light:
-        state = AppThemeMode.dark;
-        break;
-      case AppThemeMode.dark:
-        state = AppThemeMode.lessSaturated;
-        break;
-      case AppThemeMode.lessSaturated:
-        state = AppThemeMode.light;
-        break;
-    }
-  }
-
-  ThemeData get themeData {
-    switch (state) {
-      case AppThemeMode.dark:
-        return ThemeData.dark().copyWith(primaryColor: const Color(0xFF003C71));
-
-      case AppThemeMode.lessSaturated:
         return ThemeData(
           brightness: Brightness.light,
-          scaffoldBackgroundColor: const Color(0xFFACA39A),
-          cardColor: const Color(0xFFFFFFFF),
-          primaryColor: const Color(0xFF003C71),
+          scaffoldBackgroundColor: AppColors.lightBackground,
+          primaryColor: AppColors.futureBlue,
           colorScheme: const ColorScheme.light(
-            primary: Color(0xFF003C71),
-            secondary: Color(0xFFE75D2A),
-            surface: Color(0xFFACA39A),
-            onPrimary: Color(0xFFFFFFFF),
-            onSurface: Color(0xFF5B6770),
+            primary: AppColors.futureBlue,
+            secondary: AppColors.techTangerine,
           ),
-          iconTheme: const IconThemeData(color: Color(0xFF0077CA)),
-          textTheme: const TextTheme(
-            bodyLarge: TextStyle(color: Color(0xFF5B6770)),
-            bodyMedium: TextStyle(color: Color(0xFFA7A8AA)),
-            titleMedium: TextStyle(color: Color(0xFFA7A8AA)),
+          cardColor: AppColors.cardLight,
+          iconTheme: const IconThemeData(color: AppColors.futureBlue),
+          textTheme: baseLight.copyWith(
+            bodyLarge: baseLight.bodyLarge!.copyWith(
+              color: AppColors.textDark,
+              fontSize: 18,
+            ),
+            bodyMedium: baseLight.bodyMedium!.copyWith(
+              color: AppColors.textMuted,
+              fontSize: 16,
+            ),
+            bodySmall: baseLight.bodySmall!.copyWith(
+              color: AppColors.textMuted,
+              fontSize: 14,
+            ),
           ),
-          dividerColor: const Color(0xFFA7A8AA),
           appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFFACA39A),
-            foregroundColor: Color(0xFF5B6770),
+            backgroundColor: AppColors.futureBlue,
+            foregroundColor: AppColors.textWhite,
             elevation: 0,
           ),
-          switchTheme: SwitchThemeData(
-            thumbColor: MaterialStateProperty.all(const Color(0xFF0077CA)),
-            trackColor: MaterialStateProperty.all(const Color(0xFFACA39A)),
-          ),
+          extensions: <ThemeExtension<dynamic>>[
+            const NotificationsCardTheme(
+              backgroundColor: AppColors.futureBlue,
+              titleColor: AppColors.textWhite,
+              bodyColor: AppColors.textWhite,
+            ),
+          ],
         );
 
-      case AppThemeMode.light:
-      default:
+      case AppThemeMode.dark:
+        return ThemeData(
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: const Color(0xFF121212),
+          primaryColor: AppColors.futureBlue,
+          colorScheme: const ColorScheme.dark(
+            primary: AppColors.futureBlue,
+            secondary: AppColors.techTangerine,
+          ),
+          cardColor: const Color(0xFF1E1E1E),
+          iconTheme: const IconThemeData(color: AppColors.futureBlue),
+          textTheme: baseDark.copyWith(
+            bodyLarge: baseDark.bodyLarge!.copyWith(
+              color: AppColors.textWhite,
+              fontSize: 18,
+            ),
+            bodyMedium: baseDark.bodyMedium!.copyWith(
+              color: AppColors.textWhite,
+              fontSize: 16,
+            ),
+            bodySmall: baseDark.bodySmall!.copyWith(
+              color: AppColors.textWhite,
+              fontSize: 14,
+            ),
+          ),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: AppColors.futureBlue,
+            foregroundColor: AppColors.textWhite,
+          ),
+          extensions: <ThemeExtension<dynamic>>[
+            const NotificationsCardTheme(
+              backgroundColor: AppColors.futureBlue,
+              titleColor: AppColors.textWhite,
+              bodyColor: AppColors.textWhite,
+            ),
+          ],
+        );
+
+      case AppThemeMode.lessSaturated:
         return ThemeData(
           brightness: Brightness.light,
-          primaryColor: const Color(0xFF003C71),
+          scaffoldBackgroundColor: AppColors.mutedBackground,
+          primaryColor: AppColors.futureBlue,
+          cardColor: AppColors.cardMuted,
           colorScheme: const ColorScheme.light(
-            primary: Color(0xFF003C71),
-            secondary: Color(0xFFE75D2A),
+            primary: AppColors.futureBlue,
+            secondary: AppColors.techBlue,
           ),
+          iconTheme: const IconThemeData(color: AppColors.textMuted),
+          textTheme: baseLight.copyWith(
+            bodyLarge: baseLight.bodyLarge!.copyWith(
+              color: AppColors.textMuted,
+              fontSize: 18,
+            ),
+            bodyMedium: baseLight.bodyMedium!.copyWith(
+              color: AppColors.textMuted,
+              fontSize: 16,
+            ),
+            bodySmall: baseLight.bodySmall!.copyWith(
+              color: AppColors.textMuted,
+              fontSize: 14,
+            ),
+          ),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: AppColors.mutedBackground,
+            foregroundColor: AppColors.textDark,
+            elevation: 0,
+          ),
+          extensions: <ThemeExtension<dynamic>>[
+            const NotificationsCardTheme(
+              backgroundColor: AppColors.futureBlue,
+              titleColor: AppColors.textWhite,
+              bodyColor: AppColors.textWhite,
+            ),
+          ],
         );
     }
   }
+
+  NotificationsCardTheme get notificationsCardTheme =>
+      themeData.extension<NotificationsCardTheme>()!;
 }
 
-// Global provider
 final themeProvider = NotifierProvider<ThemeNotifier, AppThemeMode>(
   ThemeNotifier.new,
 );

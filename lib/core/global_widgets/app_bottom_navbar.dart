@@ -1,6 +1,4 @@
 // OntarioTechPlus - app_bottom_navbar
-//
-// Bottom Navbar widget - Navbar is housed by the shell page
 
 import 'package:flutter/material.dart';
 
@@ -16,55 +14,49 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return NavigationBarTheme(
       data: NavigationBarThemeData(
-        // Hide the selected indicator
         indicatorColor: Colors.transparent,
 
-        // Icon configuration
-        iconTheme: WidgetStateProperty.resolveWith<IconThemeData?>((states) {
-          // Set to blue if its the active icon
-          if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: Colors.blue);
+        iconTheme: MaterialStateProperty.resolveWith<IconThemeData>((states) {
+          if (states.contains(MaterialState.selected)) {
+            return IconThemeData(color: colorScheme.primary);
           }
-          return IconThemeData(color: Colors.grey.shade600);
+          return IconThemeData(color: colorScheme.onSurface.withOpacity(0.6));
         }),
 
-        // Set the label text size and height
-        labelTextStyle: WidgetStateProperty.resolveWith<TextStyle?>((states) {
+        labelTextStyle: MaterialStateProperty.resolveWith<TextStyle>((states) {
           const base = TextStyle(fontSize: 12, height: 1.1);
-
-          // Set the active index to blue text
-          if (states.contains(WidgetState.selected)) {
+          if (states.contains(MaterialState.selected)) {
             return base.copyWith(
-              color: Colors.blue,
+              color: colorScheme.primary,
               fontWeight: FontWeight.w600,
             );
           }
-
-          return base.copyWith(color: Colors.grey, fontWeight: FontWeight.w500);
+          return base.copyWith(
+            color: colorScheme.onSurface.withOpacity(0.6),
+            fontWeight: FontWeight.w500,
+          );
         }),
       ),
+
       child: NavigationBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.background,
         surfaceTintColor: Colors.transparent,
         selectedIndex: currentIndex,
         onDestinationSelected: onTap,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
 
-        // Nav button labels
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.event), label: 'Appointment'),
-          NavigationDestination(icon: Icon(Icons.add_box), label: 'Booking'),
           NavigationDestination(
-            icon: Icon(Icons.menu_book),
+            icon: Icon(Icons.menu_book_rounded),
             label: 'Academics',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.navigation),
-            label: 'Navigation',
-          ),
+          NavigationDestination(icon: Icon(Icons.navigation), label: 'Map'),
         ],
       ),
     );

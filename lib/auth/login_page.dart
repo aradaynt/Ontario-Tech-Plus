@@ -99,6 +99,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   // ====================== Submittion Function (Login/Signup) ======================
   Future<void> _submit() async {
+    print("Sup");
     // Only validate the the currently shown fields
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -112,7 +113,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // Only use certain fields depending on mode (signup/signin)
     try {
       // Base login
+      print("Trying to login");
       if (_isLogin) {
+        print("Hello man");
         await auth.signIn(
           _emailController.text.trim(),
           _passwordController.text.trim(),
