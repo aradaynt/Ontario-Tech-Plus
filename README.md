@@ -9,6 +9,7 @@ According to a large portion of the student population, the Ontario Tech Mobile 
 - Profile
     - Registration
     - Login/Logout
+    - Biometric Login (If phone has the hardware)
     - Forgot Password
     - Profile Picture (Uses ML to guarantee picture is of a face)
     - Profile detail editting
@@ -75,8 +76,8 @@ flutter run
 |Arad Ayntabli|Appointments, Book a Room, Home Screen Widget, Supabase Assistance|
 |Aaron James|Profile, Course Management, Supabase Setup|
 |Ayaan Mustafa|Maps & Navigation|
-|Sami Khan|QR Codes, Club Recommendation|
-|Teni Adegbite| User Interface, Themes|
+|Sami Khan|QR Codes, Club Recommendation, Biometric Login|
+|Teni Adegbite| User Interface, Themes, Menu Webpages|
 
 
 ### Academic Integrity
