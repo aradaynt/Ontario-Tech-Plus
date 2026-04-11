@@ -1,4 +1,5 @@
 // OntarioTechPlus - menu_page
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ontario_tech_plus/home/webview_page.dart';
@@ -29,17 +30,18 @@ class MenuPage extends StatelessWidget {
               MenuItemData(
                 icon: Icons.attach_money,
                 label: "Undergraduate\nfinances",
-                url: "https://ontariotechu.ca/current-students/finances/",
+                url: "https://registrar.ontariotechu.ca/fees-and-payment/",
               ),
               MenuItemData(
                 icon: Icons.attach_money,
                 label: "Graduate\nfinances",
-                url: "https://gradstudies.ontariotechu.ca/",
+                url: "https://registrar.ontariotechu.ca/fees-and-payment/",
               ),
               MenuItemData(
                 icon: Icons.savings,
                 label: "Awards and\nfinancial aid",
-                url: "https://ontariotechu.ca/awards/",
+                url:
+                    "https://safa.ontariotechu.ca/awards-bursaries-and-scholarships/",
               ),
             ],
           ),
@@ -51,24 +53,24 @@ class MenuPage extends StatelessWidget {
               MenuItemData(
                 icon: Icons.menu_book,
                 label: "Academic\nsupport",
-                url:
-                    "https://studentlife.ontariotechu.ca/services/academic-support/index.php",
+                url: "https://academicadvising.ontariotechu.ca/",
               ),
               MenuItemData(
                 icon: Icons.work_outline,
                 label: "Career\nreadiness",
                 url:
-                    "https://studentlife.ontariotechu.ca/services/career-readiness/index.php",
+                    "https://studentservices.ontariotechu.ca/current-students/career-readiness/",
               ),
               MenuItemData(
                 icon: Icons.backpack,
                 label: "Undergraduate\nresources",
-                url: "https://ontariotechu.ca/current-students/",
+                url:
+                    "https://my.ontariotechu.ca/current-students/undergraduate/",
               ),
               MenuItemData(
                 icon: Icons.school,
                 label: "Graduate\nresources",
-                url: "https://gradstudies.ontariotechu.ca/current-students/",
+                url: "https://my.ontariotechu.ca/current-students/graduate/",
               ),
               MenuItemData(
                 icon: Icons.accessibility,
@@ -85,17 +87,19 @@ class MenuPage extends StatelessWidget {
               MenuItemData(
                 icon: Icons.favorite_border,
                 label: "Health and\nwellness",
-                url: "https://ontariotechu.ca/studentlife/health-and-wellness/",
+                url:
+                    "https://studentservices.ontariotechu.ca/current-students/health-and-wellness/",
               ),
               MenuItemData(
                 icon: Icons.warning_amber,
                 label: "Crisis Centre",
-                url: "https://ontariotechu.ca/studentlife/crisis-support/",
+                url:
+                    "https://studentservices.ontariotechu.ca/current-students/health-and-wellness/i-am-in-distress/",
               ),
               MenuItemData(
                 icon: Icons.local_hospital,
                 label: "Sexual\nviolence",
-                url: "https://ontariotechu.ca/studentlife/sexual-violence/",
+                url: "https://studentservices.ontariotechu.ca/sexualviolence/",
               ),
               MenuItemData(
                 icon: Icons.computer,
@@ -105,7 +109,7 @@ class MenuPage extends StatelessWidget {
               MenuItemData(
                 svgPath: 'assets/icons/library.svg',
                 label: "Library",
-                url: "https://library.ontariotechu.ca/",
+                url: "https://ontariotechu.ca/sites/library/",
               ),
               MenuItemData(
                 icon: Icons.assignment_ind,
@@ -207,7 +211,6 @@ class _MenuSectionState extends State<MenuSection> {
           ),
           onTap: () => setState(() => expanded = !expanded),
         ),
-
         AnimatedCrossFade(
           firstChild: const SizedBox.shrink(),
           secondChild: Padding(
@@ -231,7 +234,6 @@ class _MenuSectionState extends State<MenuSection> {
               : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 250),
         ),
-
         const SizedBox(height: 10),
       ],
     );
