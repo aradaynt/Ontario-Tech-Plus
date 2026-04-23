@@ -2,14 +2,18 @@ import 'package:encrypt/encrypt.dart' as encrypt;
 
 class QRCipher {
   static final _key = encrypt.Key.fromUtf8('my32lengthsupersecretnooneknows1'); 
-  static final _iv = encrypt.IV.fromLength(16);
   static final _encrypter = encrypt.Encrypter(encrypt.AES(_key));
 
   /// Encrypts plain text into a base64 string for the QR code
   static String encryptData(String plainText) {
-    final encrypted = _encrypter.encrypt(plainText, iv: _iv);
-    // Add a custom prefix so our scanner quickly knows it's an OntarioTechPlus QR code
-    return 'OTP_SECURE:${encrypted.base64}';
+    // 1. Generate a fresh, random IV for this specific QR code
+    final iv = encrypt.IV.fromLength(16);
+    
+    // 2. Encrypt the data using the key and the new IV
+    final encrypted = _encrypter.encrypt(plainText, iv: iv);
+    
+    // 3. Package the IV alongside the encrypted data separated by a colon
+    return 'OTP_SECURE:${iv.base64}:${encrypted.base64}';
   }
 
   /// Decrypts the scanned text. Returns null if invalid or from an external source.
@@ -19,8 +23,16 @@ class QRCipher {
     }
     
     try {
-      final base64String = encryptedText.replaceFirst('OTP_SECURE:', '');
-      final decrypted = _encrypter.decrypt64(base64String, iv: _iv);
+      // 1. Split the string to separate the prefix, the IV, and the ciphertext
+      final parts = encryptedText.split(':');
+      if (parts.length != 3) return null;
+
+      // 2. Extract the IV that was used to encrypt this specific code
+      final iv = encrypt.IV.fromBase64(parts[1]);
+      final base64String = parts[2];
+      
+      // 3. Decrypt using the matched IV
+      final decrypted = _encrypter.decrypt64(base64String, iv: iv);
       return decrypted;
     } catch (e) {
       return null; // Decryption failed (tampered data or wrong key)
