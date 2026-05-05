@@ -5,7 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ontario_tech_plus/home/webview_page.dart';
 import 'package:ontario_tech_plus/recs(ml)/reccomendation_pages.dart';
 import 'package:ontario_tech_plus/QRcodes/scan_qr.dart';
-
+import 'package:url_launcher/url_launcher.dart';
 class MenuPage extends StatelessWidget {
   const MenuPage({super.key});
 
@@ -265,19 +265,26 @@ class MenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {
+      onTap: () async {
         if (onTap != null) {
           onTap!(item);
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => WebViewPage(
-                url: item.url,
-                title: item.label.replaceAll('\n', ' '),
-              ),
-            ),
-          );
+        } else if (item.url.isNotEmpty) {
+          // Parse the URL
+          final Uri url = Uri.parse(item.url);
+          
+          // Launch in the system's native browser
+          if (await canLaunchUrl(url)) {
+            await launchUrl(
+              url,
+              mode: LaunchMode.externalApplication, // Opens Chrome/Safari
+            );
+          } else {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Could not open the link.')),
+              );
+            }
+          }
         }
       },
       borderRadius: BorderRadius.circular(12),
